@@ -116,7 +116,7 @@
   <div id="planeName"><span id="carName">1973 MGB</span></div>
   <span class="k">Speed</span><b id="sSpd">0 mph</b>
   <span class="k">Driving on</span><b id="sMode">Road</b>
-  <span class="k">Stars</span><b id="sStars">0 / 12</b>
+  <span class="k">Stars</span><b id="sStars">0 / 14</b>
 </div>
 <div id="topbtns" class="hud">
   <button class="tb" id="bCam">🎥 Chase</button>
@@ -132,11 +132,11 @@
 <div id="menu">
   <div class="card">
     <h1>Curiosity <span>Campus Drive</span></h1>
-    <div class="sub">Drive around Camp Curiosity, Curiosity Academy and Doylestown Pickleball. Find all 12 gold stars — a few are hiding in the pool, the pond and the creek!</div>
+    <div class="sub">Drive around Camp Curiosity, Curiosity Academy and Doylestown Pickleball. Find all 14 gold stars — a few are hiding in the pool, the pond and the creek!</div>
     <h3>Pick your ride</h3>
     <div class="row" id="carRow"></div>
     <h3>How to drive</h3>
-    <ul class="help"><li><b>Left pad</b> — slide left/right to steer</li><li><b>GAS</b> to go · <b>BRAKE</b> to stop (hold it to back up) · <b>Horn</b> for fun</li><li>Only the <b>Amphi Cruiser</b> can drive into the pond, the pool and the creek. Hit the jump ramp in the big field!</li><li>Keyboard: arrows or WASD, H for the horn</li></ul>
+    <ul class="help"><li><b>Left pad</b> — slide left/right to steer</li><li><b>GAS</b> to go · <b>BRAKE</b> to stop (hold it to back up) · <b>Horn</b> for fun</li><li>Only the <b>Amphi Cruiser</b> can drive into the pond, the pool and the creek. Hit the jump ramp in the big field!</li><li>Keyboard: <b>A / D</b> steer (left hand) · <b>↑ / ↓</b> gas and brake (right hand) · <b>Space</b> horn</li></ul>
     <button id="go">Drive! 🚗</button>
   </div>
 </div>
@@ -260,6 +260,272 @@ var GFX = (function () {
 
 </script>
 <script>
+// Camp Curiosity / Curiosity Academy / Doylestown Pickleball — campus layout traced from aerial reference.
+// Local meters: x to the right of the aerial view, z toward Landisville Rd (Landisville Rd is at z = +120).
+// Shared by Doylestown RC, the Campus Tour (flight) and Campus Drive.
+var CAMPUSMAP = (function () {
+  function clamp(x, a, b) { return x < a ? a : x > b ? b : x; }
+  function smooth(a, b, x) { var t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
+  function rot(x, z, a) { var c = Math.cos(a), s = Math.sin(a); return [x * c - z * s, x * s + z * c]; }
+  function sdBox(px, pz, hx, hz, r) { var qx = Math.abs(px) - hx + r, qz = Math.abs(pz) - hz + r; return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - r; }
+
+  var POND = { x: -35, z: -125, hx: 42, hz: 11, r: 10 };
+  var POOL = { x: -53, z: 23, hx: 11.5, hz: 5.5, a: -0.64, deck: [17, 10] };
+  var KIDDIE = { x: -40, z: 35, hx: 3, hz: 3 };
+  function creekZ(x) { return -182 + 8 * Math.sin(x / 30) + 5 * Math.sin(x / 13); }
+  var BRIDGE = { x: 26, half: 3.6, len: 26, top: 0.8 };
+
+  // ---- surfaces ----
+  var ROADS = [
+    { name: 'Landisville Rd', surf: 'paved', w: 8, pts: [[-320, 121], [0, 120], [300, 118]] },
+    { name: 'Burnt House Hill Rd', surf: 'paved', w: 7, pts: [[226, 119], [228, -60], [224, -340]] },
+    { surf: 'gravel', w: 6, pts: [[97, 118], [96, -12], [86, -25], [60, -28]] },                                  // east driveway
+    { surf: 'gravel', w: 6, pts: [[86, -18], [55, -19], [19, -21], [-25, -18], [-73, -13], [-149, -15], [-201, -15]] }, // main road
+    { surf: 'gravel', w: 5, pts: [[-201, -15], [-211, 17], [-218, 66], [-223, 119]] },                          // west road
+    { surf: 'gravel', w: 5, pts: [[-73, -13], [-89, -30], [-102, -48]] },                                        // barn lot connector
+    { surf: 'dirt', w: 4, pts: [[23, -21], [18, -56], [21, -86], [26, -112], [26, -150], [26, -200], [30, -230]] }, // north track (crosses Pine Run)
+    { surf: 'paved', w: 5, pts: [[43, 119], [45, 63], [38, 33], [30, 18]] },                                     // camp driveway
+    { surf: 'paved', w: 2.5, pts: [[19, 119], [17, 69]] }                                                      // walk to farmhouse
+  ];
+  var LOTS = [
+    { surf: 'gravel', x: 58, z: -10, w: 66, d: 22, a: 0 },          // main gravel lot
+    { surf: 'gravel', x: -112, z: -68, w: 34, d: 40, a: 0.15, round: true }, // barn lot (teardrop)
+    { surf: 'paved', x: 25, z: 30, w: 40, d: 20, a: 0 },            // camp courtyard drive
+    { surf: 'sand', x: 125, z: -54, w: 20, d: 17, a: 0 },           // sand area
+    { surf: 'mulch', x: 3, z: -2, w: 30, d: 23, a: 0 }              // walled courtyard play area
+  ];
+  function surfColor(s) { return s === 'paved' ? 0x4a4d52 : s === 'gravel' ? 0xa79e8b : s === 'dirt' ? 0x8f7a58 : s === 'sand' ? 0xd9c79a : s === 'mulch' ? 0x9c7a52 : 0x777777; }
+
+  // ---- buildings: x, z, w, d, h, wall, roof, roofType, rot ----
+  var BUILDINGS = [
+    { x: -156, z: -48, w: 41, d: 20, h: 7, wall: 0xf1eee6, roof: 0x6e5a48, type: 'gable', label: 'Pickle Barn · Indoor Courts 1–5', lc: '#ffd94f', key: 'barn' },
+    { x: 36, z: 20, w: 18, d: 12, h: 7.5, wall: 0xe9e2d2, roof: 0x7a6650, type: 'gable', label: 'Camp Curiosity', lc: '#8ff0a8', key: 'camp' },
+    { x: 13, z: 20, w: 13, d: 9, h: 4.5, wall: 0xe6dfcf, roof: 0x7d5e44, type: 'gable' },
+    { x: -11, z: 30, w: 14, d: 13, h: 5, wall: 0xdfe3e0, roof: 0x3f8a80, type: 'gable' },
+    { x: 8, z: 57, w: 20, d: 18, h: 8, wall: 0xf3efe6, roof: 0x6b625a, type: 'gable', label: 'Farmhouse', key: 'house' },
+    { x: -43, z: 10, w: 10, d: 6, h: 3.5, wall: 0xe6dfcf, roof: 0x8a6a4c, type: 'gable', rot: -0.64 },
+    { x: -33, z: 27, w: 6, d: 12, h: 3.5, wall: 0xe6dfcf, roof: 0x8a6a4c, type: 'gable' },
+    { x: -74, z: -76, w: 7, d: 10, h: 3.5, wall: 0xdde2df, roof: 0x3f8a80, type: 'gable' },
+    { x: -36, z: -97, w: 6, d: 5, h: 3, wall: 0xdde2df, roof: 0x3f8a80, type: 'gable' },
+    { x: 10, z: -76, w: 8, d: 5, h: 3, wall: 0xdde2df, roof: 0x3f8a80, type: 'gable' },
+    { x: 18, z: -75, w: 7, d: 4, h: 3, wall: 0xe6dfcf, roof: 0x8a6a4c, type: 'gable' },
+    { x: 135, z: 50, w: 28, d: 5, h: 3.5, wall: 0xe6dfcf, roof: 0x8a6a4c, type: 'gable', label: 'Long shed' },
+    { x: 0, z: -2, w: 4, d: 6, h: 3, wall: 0xdde2df, roof: 0x3f8a80, type: 'gable' }
+  ];
+  // small camp cabins
+  [[-84, -53], [-84, -41], [-84, -31], [-84, -20], [-62, 6], [-50, 1], [-90, 8], [-80, 12]].forEach(function (c) {
+    BUILDINGS.push({ x: c[0], z: c[1], w: 5, d: 6, h: 3, wall: 0xd8cfbd, roof: 0x7d6a55, type: 'gable' });
+  });
+  // farm sheds (paddocks)
+  [[-172, -132], [-164, -133], [-156, -132], [-148, -131]].forEach(function (c) { BUILDINGS.push({ x: c[0], z: c[1], w: 5, d: 4, h: 2.6, wall: 0xb9b2a4, roof: 0x5e5a55, type: 'gable' }); });
+
+  var LABELS = [
+    { t: 'Doylestown Pickleball · Courts 1–12', x: -52, z: -54, h: 22, c: '#ffd94f' },
+    { t: 'Courts 13–16', x: 68, z: -43, h: 18, c: '#ffd94f' },
+    { t: 'Curiosity Academy', x: 3, z: -2, h: 20, c: '#9fd0ff' },
+    { t: 'Pool', x: -53, z: 23, h: 12, c: '#8fe0ff' },
+    { t: 'Pond', x: -35, z: -125, h: 12, c: '#8fe0ff' },
+    { t: 'Pine Run', x: -90, z: creekZ(-90), h: 12, c: '#8fe0ff' },
+    { t: 'Sport Court', x: 73, z: 19, h: 12 },
+    { t: 'Mini Golf', x: 96, z: -119, h: 12 },
+    { t: 'Sand Lot', x: 125, z: -54, h: 12 },
+    { t: 'Gazebo', x: 160, z: 50, h: 12 },
+    { t: 'Farm & Paddocks', x: -150, z: -120, h: 14 },
+    { t: 'Landisville Rd', x: -120, z: 121, h: 8 }
+  ];
+
+  // ---- terrain carving (amounts relative to local ground) ----
+  function pondSD(lx, lz) { return sdBox(lx - POND.x, lz - POND.z, POND.hx, POND.hz, POND.r); }
+  function poolLocal(lx, lz) { var p = rot(lx - POOL.x, lz - POOL.z, -POOL.a); return p; }
+  // returns { depthTo: absolute local height target or null, w: weight }
+  function waterCarve(lx, lz) {
+    var out = null;
+    var sd = pondSD(lx, lz);
+    if (sd < 10) { var t = smooth(-6, 10, sd); out = { h: -1.9, w: 1 - t }; }
+    var cd = Math.abs(lz - creekZ(lx)) - 4;
+    if (cd < 9 && lx > -330 && lx < 330) { var t2 = smooth(-2, 9, cd), o = { h: -1.4, w: 1 - t2 }; if (!out || o.w > out.w) out = o; }
+    return out;
+  }
+  function onBridge(lx, lz) { return Math.abs(lx - BRIDGE.x) < BRIDGE.half && Math.abs(lz - creekZ(BRIDGE.x)) < BRIDGE.len / 2; }
+  // pool: deck height, water depth; zero-entry ramp on the -x end
+  function poolHeight(lx, lz, deckH) {
+    var p = poolLocal(lx, lz);
+    if (Math.abs(p[0]) > POOL.deck[0] || Math.abs(p[1]) > POOL.deck[1]) {
+      var k = [lx - KIDDIE.x, lz - KIDDIE.z];
+      if (Math.abs(k[0]) < KIDDIE.hx + 2 && Math.abs(k[1]) < KIDDIE.hz + 2) return Math.abs(k[0]) < KIDDIE.hx && Math.abs(k[1]) < KIDDIE.hz ? deckH - 0.5 : deckH;
+      return null;
+    }
+    if (Math.abs(p[0]) < POOL.hx && Math.abs(p[1]) < POOL.hz) {
+      var e = p[0] + POOL.hx;
+      return e < 6 ? deckH - (e / 6) * 2.0 : deckH - 2.0;
+    }
+    return deckH;
+  }
+  function isWaterArea(lx, lz) { return pondSD(lx, lz) < 0 || Math.abs(lz - creekZ(lx)) < 4; }
+
+  // ---- geometry helpers ----
+  var ROOFG = (function () { var s = new THREE.Shape(); s.moveTo(-0.5, 0); s.lineTo(0.5, 0); s.lineTo(0, 0.5); s.lineTo(-0.5, 0); var g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false }); g.translate(0, 0, -0.5); return g; })();
+  function tex(w, h, draw) { var c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); var t = new THREE.CanvasTexture(c); t.anisotropy = 8; return t; }
+  function courtTex(along) {
+    return tex(128, 256, function (c, w, h) {
+      c.fillStyle = '#4f7f5d'; c.fillRect(0, 0, w, h);
+      c.fillStyle = '#3f63a8'; c.fillRect(20, 26, w - 40, h - 52);
+      c.strokeStyle = '#fff'; c.lineWidth = 3; c.strokeRect(20, 26, w - 40, h - 52);
+      c.beginPath(); c.moveTo(20, h / 2 - 36); c.lineTo(w - 20, h / 2 - 36); c.moveTo(20, h / 2 + 36); c.lineTo(w - 20, h / 2 + 36);
+      c.moveTo(w / 2, 26); c.lineTo(w / 2, h / 2 - 36); c.moveTo(w / 2, h / 2 + 36); c.lineTo(w / 2, h - 26); c.stroke();
+      c.fillStyle = '#aab3ba'; c.fillRect(12, h / 2 - 2, w - 24, 4);
+    });
+  }
+
+  // Build into a scene. gH(x,z) = world ground height; o = {x,z} world offset; cb.label(text,x,y,z,color); cb.solid(x0,x1,z0,z1,top)
+  function build(scene, o, gH, cb) {
+    var lamb = function (c) { return new THREE.MeshLambertMaterial({ color: c }); };
+    var ground = function (lx, lz) { return gH(o.x + lx, o.z + lz); };
+    var meshes = [];
+    function add(m) { m.castShadow = true; m.receiveShadow = true; scene.add(m); meshes.push(m); return m; }
+    function flat(w, d, mat, lx, lz, lift, a) {
+      var m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, a || 0, 0);
+      m.position.set(o.x + lx, ground(lx, lz) + (lift || 0.08), o.z + lz); m.receiveShadow = true; scene.add(m); return m;
+    }
+    // roads (draped ribbons)
+    ROADS.forEach(function (r) {
+      var p = [], idx = [], n = 0;
+      for (var i = 0; i < r.pts.length - 1; i++) {
+        var a = r.pts[i], b = r.pts[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), st = Math.max(1, Math.ceil(L / 2)), nx = -dz / L * r.w / 2, nz = dx / L * r.w / 2;
+        for (var s = 0; s <= st; s++) {
+          var x = a[0] + dx * s / st, z = a[1] + dz * s / st, bridge = onBridge(x, z);
+          var y1 = bridge ? BRIDGE.top + gH(o.x + BRIDGE.x, o.z) * 0 : Math.max(ground(x + nx, z + nz), ground(x, z) - 0.3), y2 = bridge ? BRIDGE.top : Math.max(ground(x - nx, z - nz), ground(x, z) - 0.3);
+          if (bridge) { y1 = y2 = ground(BRIDGE.x, creekZ(BRIDGE.x) + BRIDGE.len / 2) + 0.1; }
+          p.push(o.x + x + nx, y1 + 0.07, o.z + z + nz, o.x + x - nx, y2 + 0.07, o.z + z - nz);
+          if (s > 0) idx.push(n - 2, n - 1, n, n - 1, n + 1, n); n += 2;
+        }
+        n = p.length / 3;
+      }
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setIndex(idx); g.computeVertexNormals();
+      var m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: surfColor(r.surf), side: THREE.DoubleSide })); m.receiveShadow = true; scene.add(m);
+    });
+    LOTS.forEach(function (l) {
+      var g = l.round ? new THREE.CircleGeometry(0.5, 28) : new THREE.PlaneGeometry(1, 1);
+      var m = new THREE.Mesh(g, lamb(surfColor(l.surf))); m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, l.a || 0, 0); m.scale.set(l.w, l.d, 1);
+      m.position.set(o.x + l.x, ground(l.x, l.z) + 0.06, o.z + l.z); m.receiveShadow = true; scene.add(m);
+    });
+    // buildings
+    BUILDINGS.forEach(function (b) {
+      var gy = ground(b.x, b.z), wallM = lamb(b.wall), roofM = lamb(b.roof);
+      var body = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), wallM); body.position.set(o.x + b.x, gy + b.h / 2, o.z + b.z); body.rotation.y = b.rot || 0; add(body);
+      var roof = new THREE.Mesh(ROOFG, roofM); var rh = Math.min(b.w, b.d) * 0.7;
+      var along = b.w >= b.d; roof.scale.set(along ? b.d * 1.1 : b.w * 1.1, rh, along ? b.w * 1.04 : b.d * 1.04);
+      roof.rotation.y = (b.rot || 0) + (along ? Math.PI / 2 : 0); roof.position.set(o.x + b.x, gy + b.h, o.z + b.z); add(roof);
+      if (b.key === 'barn') { var door = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.5, 6), lamb(0x8b8f94)); door.position.set(o.x + b.x + b.w / 2 + 0.1, gy + 2.25, o.z + b.z); add(door); }
+      if (b.key === 'camp') { for (var i = 0; i < 3; i++) { var dm = new THREE.Mesh(new THREE.BoxGeometry(2, 1.6, 1.5), lamb(b.wall)); dm.position.set(o.x + b.x - 5 + i * 5, gy + b.h + 1.6, o.z + b.z + 3); add(dm); } }
+      var c = Math.abs(Math.cos(b.rot || 0)), s = Math.abs(Math.sin(b.rot || 0)), hw = (b.w * c + b.d * s) / 2, hd = (b.w * s + b.d * c) / 2;
+      cb.solid(o.x + b.x - hw, o.x + b.x + hw, o.z + b.z - hd, o.z + b.z + hd, gy + b.h + rh * 0.5);
+      if (b.label) cb.label(b.label, o.x + b.x, gy + b.h + 14, o.z + b.z, b.lc);
+    });
+    // Courts 1–12 (two columns × six rows, court length runs across)
+    var ct = courtTex(), cm = new THREE.MeshLambertMaterial({ map: ct }), sur = lamb(0x5d8a69), fence = new THREE.MeshLambertMaterial({ color: 0x1e2226, transparent: true, opacity: 0.35 });
+    var CB = { x: -52, z: -54, w: 36, d: 55 };
+    flat(CB.w, CB.d, sur, CB.x, CB.z, 0.07);
+    for (var r = 0; r < 6; r++) for (var col = 0; col < 2; col++) {
+      var cx = CB.x - 8.6 + col * 17.2, cz = CB.z - 22.5 + r * 9;
+      var m = flat(8.4, 16.6, cm, cx, cz, 0.09, Math.PI / 2);
+      var net = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 6.4), lamb(0x222222)); net.position.set(o.x + cx, ground(cx, cz) + 0.5, o.z + cz); add(net);
+    }
+    var gyc = ground(CB.x, CB.z);
+    [[0, -CB.d / 2, CB.w, 0.08], [0, CB.d / 2, CB.w, 0.08], [-CB.w / 2, 0, 0.08, CB.d], [CB.w / 2, 0, 0.08, CB.d], [0, 0, 0.08, CB.d]].forEach(function (f) {
+      var fm = new THREE.Mesh(new THREE.BoxGeometry(f[2], 3, f[3]), fence); fm.position.set(o.x + CB.x + f[0], gyc + 1.5, o.z + CB.z + f[1]); scene.add(fm);
+    });
+    cb.solid(o.x + CB.x - CB.w / 2 - 0.3, o.x + CB.x - CB.w / 2 + 0.3, o.z + CB.z - CB.d / 2, o.z + CB.z + CB.d / 2, gyc + 3);
+    cb.solid(o.x + CB.x + CB.w / 2 - 0.3, o.x + CB.x + CB.w / 2 + 0.3, o.z + CB.z - CB.d / 2, o.z + CB.z + CB.d / 2 - 8, gyc + 3);
+    cb.solid(o.x + CB.x - CB.w / 2, o.x + CB.x + CB.w / 2, o.z + CB.z - CB.d / 2 - 0.3, o.z + CB.z - CB.d / 2 + 0.3, gyc + 3);
+    // Courts 13–16 (rounded fenced area, four courts side by side)
+    var C2 = { x: 68, z: -43 }, g2 = ground(C2.x, C2.z);
+    var pad = new THREE.Mesh(new THREE.CircleGeometry(1, 32), sur); pad.rotation.x = -Math.PI / 2; pad.scale.set(23, 13, 1); pad.position.set(o.x + C2.x, g2 + 0.07, o.z + C2.z); pad.receiveShadow = true; scene.add(pad);
+    for (var k = 0; k < 4; k++) { var kx = C2.x - 13.5 + k * 9; flat(8.4, 16.6, cm, kx, C2.z + 1, 0.09); var n2 = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.9, 0.06), lamb(0x222222)); n2.position.set(o.x + kx, g2 + 0.5, o.z + C2.z + 1); add(n2); }
+    var shade = new THREE.Mesh(new THREE.BoxGeometry(40, 3, 3), lamb(0xf0efe8)); shade.position.set(o.x + C2.x, g2 + 1.5, o.z + C2.z - 13); add(shade);
+    cb.solid(o.x + C2.x - 20, o.x + C2.x + 20, o.z + C2.z - 14.5, o.z + C2.z - 11.5, g2 + 3);
+    // Sport court (gray, two courts)
+    var sc = tex(256, 160, function (c, w, h) { c.fillStyle = '#8d9296'; c.fillRect(0, 0, w, h); c.strokeStyle = '#f2f2f2'; c.lineWidth = 3; c.strokeRect(12, 12, w / 2 - 18, h - 24); c.strokeRect(w / 2 + 6, 12, w / 2 - 18, h - 24); c.beginPath(); c.moveTo(w / 4, 12); c.lineTo(w / 4, h - 12); c.moveTo(3 * w / 4, 12); c.lineTo(3 * w / 4, h - 12); c.stroke(); });
+    flat(31, 20, new THREE.MeshLambertMaterial({ map: sc }), 73, 19, 0.09, -0.35);
+    // Pool + kiddie pool
+    var dk = flat(POOL.deck[0] * 2, POOL.deck[1] * 2, lamb(0xe9e4d6), POOL.x, POOL.z, 0.1, -POOL.a);
+    var pw = tex(256, 128, function (c, w, h) { c.fillStyle = '#3fb4e6'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(20,70,140,.5)'; for (var i = 1; i < 6; i++) c.fillRect(30, i * h / 6 - 2, w - 60, 4); c.fillStyle = 'rgba(255,255,255,.3)'; c.fillRect(0, 0, 40, h); });
+    var poolW = new THREE.Mesh(new THREE.PlaneGeometry(POOL.hx * 2, POOL.hz * 2), new THREE.MeshPhongMaterial({ map: pw, transparent: true, opacity: 0.88, shininess: 120 }));
+    poolW.rotation.order = 'YXZ'; poolW.rotation.set(-Math.PI / 2, -POOL.a, 0);
+    var poolTop = ground(POOL.x + 30, POOL.z) ; poolW.position.set(o.x + POOL.x, (cb.poolWaterY !== undefined ? cb.poolWaterY : ground(POOL.x, POOL.z) - 0.15) + 0.0, o.z + POOL.z); scene.add(poolW);
+    var kid = new THREE.Mesh(new THREE.PlaneGeometry(KIDDIE.hx * 2, KIDDIE.hz * 2), new THREE.MeshPhongMaterial({ color: 0x8fdcf5, transparent: true, opacity: 0.85 }));
+    kid.rotation.x = -Math.PI / 2; kid.position.set(o.x + KIDDIE.x, (cb.poolWaterY !== undefined ? cb.poolWaterY + 0.05 : ground(KIDDIE.x, KIDDIE.z) - 0.1), o.z + KIDDIE.z); scene.add(kid);
+    // pond water + dock (flight map supplies its own water level)
+    if (cb.pondWater) {
+      var sh = new THREE.Shape(), hx = POND.hx, hz = POND.hz, rr = POND.r;
+      sh.moveTo(-hx + rr, -hz); sh.lineTo(hx - rr, -hz); sh.quadraticCurveTo(hx, -hz, hx, -hz + rr); sh.lineTo(hx, hz - rr); sh.quadraticCurveTo(hx, hz, hx - rr, hz);
+      sh.lineTo(-hx + rr, hz); sh.quadraticCurveTo(-hx, hz, -hx, hz - rr); sh.lineTo(-hx, -hz + rr); sh.quadraticCurveTo(-hx, -hz, -hx + rr, -hz);
+      var pg = new THREE.ShapeGeometry(sh, 8); pg.rotateX(Math.PI / 2); var pm = new THREE.Mesh(pg, cb.pondWater); pm.material.side = THREE.DoubleSide; pm.position.set(o.x + POND.x, cb.pondY, o.z + POND.z); scene.add(pm);
+    }
+    var dock = new THREE.Mesh(new THREE.BoxGeometry(2, 0.25, 7), lamb(0xece6da)); dock.position.set(o.x + POND.x - 22, (cb.pondY !== undefined ? cb.pondY : 0) + 0.35, o.z + POND.z + POND.hz - 1); add(dock);
+    // bridge over Pine Run
+    var bz = creekZ(BRIDGE.x), by = ground(BRIDGE.x, bz + BRIDGE.len / 2) + 0.1;
+    var deck = new THREE.Mesh(new THREE.BoxGeometry(BRIDGE.half * 2, 0.3, BRIDGE.len), lamb(0x8a6440)); deck.position.set(o.x + BRIDGE.x, by - 0.1, o.z + bz); add(deck);
+    [-1, 1].forEach(function (s) { var rl = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1, BRIDGE.len - 4), lamb(0x6b4a2e)); rl.position.set(o.x + BRIDGE.x + s * BRIDGE.half, by + 0.5, o.z + bz); add(rl); cb.solid(o.x + BRIDGE.x + s * BRIDGE.half - 0.25, o.x + BRIDGE.x + s * BRIDGE.half + 0.25, o.z + bz - BRIDGE.len / 2 + 2, o.z + bz + BRIDGE.len / 2 - 2, by + 1); });
+    // gazebo, round pad, mini golf, sand lot posts, playground
+    var gz = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 0.3, 8), lamb(0xd8d2c4)); gz.position.set(o.x + 160, ground(160, 50) + 0.15, o.z + 50); add(gz);
+    var gr = new THREE.Mesh(new THREE.ConeGeometry(4, 2.2, 8), lamb(0x6d6a66)); gr.position.set(o.x + 160, ground(160, 50) + 3.8, o.z + 50); add(gr);
+    for (var q = 0; q < 8; q++) { var a = q / 8 * Math.PI * 2; var po = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.8, 0.2), lamb(0xeeeeee)); po.position.set(o.x + 160 + Math.cos(a) * 3.1, ground(160, 50) + 1.6, o.z + 50 + Math.sin(a) * 3.1); add(po); }
+    var rp = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 0.2, 20), lamb(0xdedad0)); rp.position.set(o.x + 177, ground(177, 51) + 0.1, o.z + 51); rp.receiveShadow = true; scene.add(rp);
+    var mg = tex(128, 192, function (c, w, h) { c.fillStyle = '#6b5a45'; c.fillRect(0, 0, w, h); c.fillStyle = '#4c9a63'; for (var i = 0; i < 6; i++) c.fillRect(14 + (i % 2) * 10, 12 + i * 28, 90, 14); c.beginPath(); c.arc(64, 176, 12, 0, 7); c.fill(); });
+    flat(12, 20, new THREE.MeshLambertMaterial({ map: mg }), 96, -119, 0.09);
+    var pl = [[0x3d7fc1, 0, -2], [0xffcf3a, 6, 4], [0xe5483b, -7, 3]];
+    pl.forEach(function (p) { var b = new THREE.Mesh(new THREE.BoxGeometry(3, 2.4, 3), lamb(p[0])); b.position.set(o.x + 3 + p[1], ground(3, -2) + 1.2, o.z - 2 + p[2]); add(b); });
+    var turf = flat(8, 10, lamb(0x56b04a), 12, -4, 0.1);
+    // courtyard walls (open on the lot side)
+    var wall = lamb(0xeae6dc), cy0 = ground(3, -2);
+    [[3, -13.5, 30, 0.4], [-12, -2, 0.4, 23], [3, 9.5, 30, 0.4]].forEach(function (wv) { var wm = new THREE.Mesh(new THREE.BoxGeometry(wv[2], 1.6, wv[3]), wall); wm.position.set(o.x + wv[0], cy0 + 0.8, o.z + wv[1]); add(wm); cb.solid(o.x + wv[0] - wv[2] / 2, o.x + wv[0] + wv[2] / 2, o.z + wv[1] - wv[3] / 2, o.z + wv[1] + wv[3] / 2, cy0 + 1.6); });
+    // paddock rail fences
+    var rail = lamb(0x5a4632);
+    [[-175, -148, -132, -148], [-132, -148, -132, -96], [-175, -96, -132, -96], [-175, -148, -175, -96], [-175, -115, -132, -115]].forEach(function (f) {
+      var dx = f[2] - f[0], dz = f[3] - f[1], L = Math.hypot(dx, dz), mx = (f[0] + f[2]) / 2, mz = (f[1] + f[3]) / 2;
+      var fm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, L), rail); fm.rotation.y = Math.atan2(dx, dz); fm.position.set(o.x + mx, ground(mx, mz) + 1.1, o.z + mz); scene.add(fm);
+      var fm2 = fm.clone(); fm2.position.y -= 0.5; scene.add(fm2);
+    });
+    // field fence lines (SW field)
+    [[-150, -10, -150, 112], [-26, -10, -26, 112], [-150, 50, -26, 50]].forEach(function (f) {
+      var dx = f[2] - f[0], dz = f[3] - f[1], L = Math.hypot(dx, dz), mx = (f[0] + f[2]) / 2, mz = (f[1] + f[3]) / 2;
+      var fm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, L), rail); fm.rotation.y = Math.atan2(dx, dz); fm.position.set(o.x + mx, ground(mx, mz) + 1, o.z + mz); scene.add(fm);
+    });
+    LABELS.forEach(function (l) { cb.label(l.t, o.x + l.x, ground(l.x, l.z) + l.h, o.z + l.z, l.c); });
+    return meshes;
+  }
+
+  // Where trees may grow (local): woods north of the pond & around Pine Run, west strip, NE corner, scattered yard trees
+  function treeOK(lx, lz) {
+    if (isWaterArea(lx, lz)) return false;
+    if (Math.abs(lz - creekZ(lx)) < 6) return false;
+    if (Math.abs(lx - BRIDGE.x) < 7 && lz < -140) return false;
+    for (var i = 0; i < ROADS.length; i++) { var r = ROADS[i]; for (var j = 0; j < r.pts.length - 1; j++) { var a = r.pts[j], b = r.pts[j + 1], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz, t = clamp(((lx - a[0]) * dx + (lz - a[1]) * dz) / L2, 0, 1); if (Math.hypot(lx - a[0] - dx * t, lz - a[1] - dz * t) < r.w / 2 + 4) return false; } }
+    var woods = lz < -150 || (lz < -110 && (lx < -200 || lx > 110)) || lx < -228 || (lx > 175 && lz < -40) || (lz > 128);
+    var yard = (lx > -100 && lx < 60 && lz > 25 && lz < 115 && Math.abs(lx - 8) > 14) || (lx > 150 && lx < 222 && lz > 60 && lz < 115);
+    return woods ? 0.9 : yard ? 0.08 : 0;
+  }
+  function inside(lx, lz, pad) { for (var i = 0; i < BUILDINGS.length; i++) { var b = BUILDINGS[i]; if (Math.abs(lx - b.x) < b.w / 2 + pad && Math.abs(lz - b.z) < b.d / 2 + pad) return true; } return false; }
+
+  function roadAt(lx, lz) {
+    for (var i = 0; i < ROADS.length; i++) { var r = ROADS[i]; for (var j = 0; j < r.pts.length - 1; j++) { var a = r.pts[j], b = r.pts[j + 1], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz, t = clamp(((lx - a[0]) * dx + (lz - a[1]) * dz) / L2, 0, 1); if (Math.hypot(lx - a[0] - dx * t, lz - a[1] - dz * t) < r.w / 2) return r.surf; } }
+    for (var k = 0; k < LOTS.length; k++) { var l = LOTS[k], p = rot(lx - l.x, lz - l.z, -(l.a || 0)); if (Math.abs(p[0]) < l.w / 2 && Math.abs(p[1]) < l.d / 2) return l.surf; }
+    return null;
+  }
+
+  var SPOTS = {
+    barn: { x: -156, z: -48 }, courts: { x: -52, z: -54 }, courts2: { x: 68, z: -43 }, academy: { x: 3, z: -2 }, camp: { x: 36, z: 20 },
+    pool: { x: -53, z: 23 }, pond: { x: -35, z: -125 }, creek: { x: -90, z: creekZ(-90) }, farm: { x: -150, z: -120 }, house: { x: 8, z: 57 },
+    minigolf: { x: 96, z: -119 }, sand: { x: 125, z: -54 }, gazebo: { x: 160, z: 50 }, entrance: { x: 97, z: 112 }, bridge: { x: BRIDGE.x, z: creekZ(BRIDGE.x) }
+  };
+
+  return { POND: POND, POOL: POOL, KIDDIE: KIDDIE, BRIDGE: BRIDGE, creekZ: creekZ, waterCarve: waterCarve, poolHeight: poolHeight, onBridge: onBridge,
+    isWaterArea: isWaterArea, pondSD: pondSD, build: build, treeOK: treeOK, inside: inside, roadAt: roadAt, ROADS: ROADS, SPOTS: SPOTS, smooth: smooth };
+})();
+
+</script>
+<script>
 // Curiosity Campus Drive — drive around Camp Curiosity & Doylestown Pickleball (stylized campus layout)
 (function () {
 'use strict';
@@ -270,41 +536,23 @@ function smooth(a, b, x) { var t = clamp((x - a) / (b - a), 0, 1); return t * t 
 var seed = 5; function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
 function lam(c) { return new THREE.MeshLambertMaterial({ color: c }); }
 
-// ---------------- Campus terrain (x = east, z = south, meters; water level y = 0) ----------------
-var POOL = { x: 5, z: -20, w: 25, d: 12 }, POND = { x: -165, z: -105, r: 32 }, RAMP = { x0: -32, x1: -14, z: -95, w: 4.5, h: 2.4 };
-var BRIDGE = { x: 25, half: 4.2, top: 0.75 };
-function riverZ(x) { return -198 + 16 * Math.sin(x / 45); }
+// ---------------- Campus terrain (layout from campus.js; water level y = 0) ----------------
+var CM = CAMPUSMAP, RAMP = { x0: -102, x1: -84, z: 82, w: 4.5, h: 2.4 };
 function baseH(x, z) {
-  var h = 0.6 + 0.9 * Math.sin(x * 0.013) * Math.cos(z * 0.011) + 0.35 * Math.sin(x * 0.05 + z * 0.04);
-  var core = 1 - smooth(0, 35, Math.max(Math.abs(x) - 150, Math.abs(z + 5) - 160, 0));
+  var h = 0.6 + 0.5 * Math.sin(x * 0.013) * Math.cos(z * 0.011) + 0.2 * Math.sin(x * 0.05 + z * 0.04);
+  var core = 1 - smooth(0, 30, Math.max(Math.abs(x - 0) - 200, Math.abs(z + 10) - 135, 0));
   h = h * (1 - core) + 0.6 * core;
-  var edge = Math.max(Math.abs(x), Math.abs(z)); h += smooth(300, 360, edge) * 8;
+  h += smooth(300, 360, Math.max(Math.abs(x), Math.abs(z + 40))) * 8;
   return h;
 }
 function groundH(x, z) {
   var h = baseH(x, z);
-  // pond
-  var pd = Math.hypot(x - POND.x, z - POND.z);
-  if (pd < POND.r + 14) { var t = smooth(POND.r - 12, POND.r + 14, pd); h = h * t + (-1.9) * (1 - t); }
-  // river
-  var rd = Math.abs(z - riverZ(x));
-  if (rd < 22) { var tr = smooth(5, 22, rd); h = h * tr + (-1.6) * (1 - tr); }
-  // bridge deck
-  if (Math.abs(x - BRIDGE.x) < BRIDGE.half && rd < 24) h = Math.max(h, BRIDGE.top);
-  // pool (deck 0.4, zero-entry beach on the west end)
-  var px = x - POOL.x, pz = z - POOL.z;
-  if (Math.abs(px) < POOL.w / 2 + 3 && Math.abs(pz) < POOL.d / 2 + 3) {
-    h = 0.4;
-    if (Math.abs(px) < POOL.w / 2 && Math.abs(pz) < POOL.d / 2) {
-      var depthAt = px < -POOL.w / 2 + 7 ? 0.4 - (px + POOL.w / 2) / 7 * 2.0 : -1.6;
-      h = depthAt;
-    }
-  }
-  // jump ramp
+  var wc = CM.waterCarve(x, z); if (wc) h = h * (1 - wc.w) + wc.h * wc.w;
+  if (CM.onBridge(x, z)) h = Math.max(h, 0.75);
+  var ph = CM.poolHeight(x, z, 0.45); if (ph !== null) h = ph;
   if (x > RAMP.x0 && x < RAMP.x1 && Math.abs(z - RAMP.z) < RAMP.w) h += (x - RAMP.x0) / (RAMP.x1 - RAMP.x0) * RAMP.h;
   return h;
 }
-
 // ---------------- Renderer / scene ----------------
 var renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -322,16 +570,7 @@ var sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 32, 16), new THREE.Shade
 scene.add(sky);
 function canvasTex(w, h, draw) { var c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); var t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; }
 
-// roads (paved = Landisville Rd + parking; gravel = campus loop)
-var ROADS = [
-  { w: 9, col: 0x4a4d52, paved: true, pts: [[-360, 182], [0, 178], [360, 172]] },
-  { w: 6, col: 0x9c8f78, pts: [[-10, 178], [-10, 128], [-25, 40], [-55, -50], [-40, -140], [BRIDGE.x, -160], [BRIDGE.x, -236], [110, -232], [175, -150], [165, -50], [118, 40], [105, 140], [30, 150], [-10, 128]] },
-  { w: 5, col: 0x9c8f78, pts: [[-55, -50], [-120, -75], [-150, -60]] },
-  { w: 5, col: 0x9c8f78, pts: [[165, -50], [125, -100]] }
-];
-function segDist(x, z, a, b) { var dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz, t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / L2, 0, 1); return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t); }
-function onRoad(x, z) { for (var r = 0; r < ROADS.length; r++) { var R = ROADS[r]; for (var i = 0; i < R.pts.length - 1; i++) if (segDist(x, z, R.pts[i], R.pts[i + 1]) < R.w / 2) return true; } return Math.abs(x + 10) < 35 && Math.abs(z - 140) < 13; }
-
+function onRoad(x, z) { return CM.roadAt(x, z) !== null; }
 (function terrain() {
   var g = new THREE.PlaneGeometry(800, 800, 320, 320); g.rotateX(-Math.PI / 2);
   var pos = g.attributes.position, cols = new Float32Array(pos.count * 3), c = new THREE.Color();
@@ -339,35 +578,20 @@ function onRoad(x, z) { for (var r = 0; r < ROADS.length; r++) { var R = ROADS[r
   for (var i = 0; i < pos.count; i++) {
     var x = pos.getX(i), z = pos.getZ(i), h = groundH(x, z); pos.setY(i, h);
     if (h < -0.15) c.copy(sand).lerp(mud, clamp(-h / 1.8, 0, 1));
-    else if (h < 0.25 && (Math.hypot(x - POND.x, z - POND.z) < POND.r + 16 || Math.abs(z - riverZ(x)) < 20)) c.copy(sand);
+    else if (h < 0.3 && (CM.pondSD(x, z) < 12 || Math.abs(z - CM.creekZ(x)) < 12)) c.copy(sand).lerp(grass2, 0.5);
     else c.copy(grass).lerp(grass2, (Math.sin(x * 0.07) * Math.cos(z * 0.08) + 1) / 2);
-    if (x > 140 && x < 240 && z > -80 && z < 0) c.copy(Math.floor((x - 140) / 34) % 2 ? wheat : field).offsetHSL(0, 0, Math.sin(z * 0.9) * 0.03);
+    if (Math.abs(z - CM.creekZ(x)) < 40 || z < -150) c.lerp(new THREE.Color(0x4d7a35), 0.5);
+    if ((x > 175 && x < 222 && z > -40 && z < 115) || (x > -220 && x < -30 && z > -8 && z < 115)) c.offsetHSL(0, 0, Math.sin((x + z * 0.1) * 0.6) * 0.035);
     cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b;
   }
   g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); g.computeVertexNormals();
   var tm = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, map: GFX.grainTex(140, 0.28, true) })); tm.receiveShadow = true; scene.add(tm);
-  // roads as ribbons
-  ROADS.forEach(function (r) {
-    var p = [], idx = [], n = 0;
-    for (var i = 0; i < r.pts.length - 1; i++) {
-      var a = r.pts[i], b = r.pts[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), st = Math.ceil(L / 2), nx = -dz / L * r.w / 2, nz = dx / L * r.w / 2;
-      for (var s = 0; s <= st; s++) {
-        var x = a[0] + dx * s / st, z = a[1] + dz * s / st;
-        p.push(x + nx, Math.max(groundH(x + nx, z + nz), 0.05) + 0.06, z + nz, x - nx, Math.max(groundH(x - nx, z - nz), 0.05) + 0.06, z - nz);
-        if (s > 0) idx.push(n - 2, n - 1, n, n - 1, n + 1, n); n += 2;
-      }
-      n = p.length / 3;
-    }
-    var rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); rg.setIndex(idx); rg.computeVertexNormals();
-    var rm = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ color: r.col, side: THREE.DoubleSide })); rm.receiveShadow = true; scene.add(rm);
-  });
 })();
 var waterTex = canvasTex(256, 256, function (x, w, h) { x.fillStyle = '#2f7fae'; x.fillRect(0, 0, w, h); for (var i = 0; i < 120; i++) { x.strokeStyle = 'rgba(200,235,255,' + (0.05 + rnd() * 0.15) + ')'; x.lineWidth = 1 + rnd() * 2; var px = rnd() * w, py = rnd() * h, l = 10 + rnd() * 30; x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + l / 2, py - 3, px + l, py); x.stroke(); } });
 waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping; waterTex.repeat.set(40, 40);
 var water = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), new THREE.MeshPhongMaterial({ map: waterTex, transparent: true, opacity: 0.82, shininess: 110, specular: 0x8fb7d8 }));
 water.rotation.x = -Math.PI / 2; water.position.y = 0; scene.add(water);
-var poolWater = new THREE.Mesh(new THREE.PlaneGeometry(POOL.w, POOL.d), new THREE.MeshPhongMaterial({ color: 0x46c3f0, transparent: true, opacity: 0.8, shininess: 120 }));
-poolWater.rotation.x = -Math.PI / 2; poolWater.position.set(POOL.x, 0.02, POOL.z); scene.add(poolWater);
+var poolWater = null;
 
 // ---------------- Static scenery ----------------
 var boxes = [], circles = [];
@@ -390,73 +614,27 @@ function label(text, x, y, z, color) {
   });
   var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthWrite: false })); s.position.set(x, y, z); s.scale.set(24, 4.5, 1); scene.add(s); labels.push(s);
 }
-(function campus() {
-  // Pickle Barn
-  house(-55, 95, 64, 26, 9, 0xa3302a, 0x3f4247); bx(14, 6, 0.4, 0xf3efe6, -55, 3.6, 108.1);
-  label('Pickle Barn · Indoor Courts 1–5', -55, 20, 95, '#ffd94f');
-  // courts
-  var ct = canvasTex(128, 256, function (c, w, h) {
-    c.fillStyle = '#2f6fb0'; c.fillRect(0, 0, w, h); c.fillStyle = '#3d8f4f'; c.fillRect(0, 0, w, 14); c.fillRect(0, h - 14, w, 14); c.fillRect(0, 0, 12, h); c.fillRect(w - 12, 0, 12, h);
-    c.strokeStyle = '#fff'; c.lineWidth = 3; c.strokeRect(18, 20, w - 36, h - 40); c.beginPath(); c.moveTo(18, h / 2 - 34); c.lineTo(w - 18, h / 2 - 34); c.moveTo(18, h / 2 + 34); c.lineTo(w - 18, h / 2 + 34);
-    c.moveTo(w / 2, 20); c.lineTo(w / 2, h / 2 - 34); c.moveTo(w / 2, h / 2 + 34); c.lineTo(w / 2, h - 20); c.stroke(); c.fillStyle = '#222'; c.fillRect(10, h / 2 - 2, w - 20, 4);
-  });
-  function court(x, z) { flatPlane(8.5, 16.5, 0, x, z, 0.65, ct); bx(6.6, 0.9, 0.06, 0x222222, x, 1.05, z); }
-  for (var i = 0; i < 12; i++) court(29.5 + (i % 6) * 9, 66 + Math.floor(i / 6) * 17.5);
-  for (var j = 0; j < 4; j++) court(41.5 + j * 9, 120);
-  var fenceM = new THREE.MeshLambertMaterial({ color: 0x1e2226, transparent: true, opacity: 0.35 });
-  [[55, 56.5], [55, 93.5]].forEach(function (f) { bx(56, 3, 0.08, fenceM, f[0], 2.1, f[1]); for (var q = 0; q <= 8; q++) bx(0.12, 3.2, 0.12, 0x2b2f33, f[0] - 28 + q * 7, 2.2, f[1]); solid(f[0], f[1], 56, 0.6); });
-  label('Doylestown Pickleball · Courts 1–16', 55, 16, 75, '#ffd94f');
-  // parking
-  flatPlane(70, 26, 0x5a5d62, -10, 140, 0.66);
-  for (var k = 0; k < 12; k++) bx(0.15, 0.02, 4.5, 0xffffff, -40 + k * 5.5, 0.68, 135);
-  // Curiosity Academy
-  house(-105, -10, 30, 16, 6, 0xf4f1ea, 0x3d7fc1); house(-101, -28, 22, 12, 5.5, 0xf4f1ea, 0x79b8e8);
-  var mulch = new THREE.Mesh(new THREE.CircleGeometry(12, 24), lam(0xb08a5a)); mulch.rotation.x = -Math.PI / 2; mulch.position.set(-70, 0.64, -30); scene.add(mulch);
-  bx(4, 3, 4, 0xffcf3a, -70, 2.1, -30); solid(-70, -30, 4, 4); bx(6, 0.4, 1.5, 0xe5483b, -66, 1.6, -28);
-  label('Curiosity Academy', -105, 18, -18, '#9fd0ff');
-  // Camp: pavilion, pool, cabins, field
-  bx(24, 0.5, 14, 0x6b4a2e, 45, 3.6, -45);
-  [-11, 11].forEach(function (dx) { [-6, 6].forEach(function (dz) { bx(0.4, 3, 0.4, 0x6b4a2e, 45 + dx, 2.1, -45 + dz); circles.push({ x: 45 + dx, z: -45 + dz, r: 0.5 }); }); });
-  var pr = new THREE.Mesh(ROOFG, lam(0x3b9a57)); pr.scale.set(26, 10, 16); pr.position.set(45, 3.8, -45); scene.add(pr);
-  flatPlane(POOL.w + 6, POOL.d + 6, 0xe8e2d0, POOL.x, POOL.z, 0.41).visible = false;
-  [[0, -POOL.d / 2 - 1.5, POOL.w + 6, 3], [0, POOL.d / 2 + 1.5, POOL.w + 6, 3], [POOL.w / 2 + 1.5, 0, 3, POOL.d]].forEach(function (d) { flatPlane(d[2], d[3], 0xe8e2d0, POOL.x + d[0], POOL.z + d[1], 0.42); });
-  flatPlane(3, POOL.d, 0xe8e2d0, POOL.x - POOL.w / 2 - 1.5, POOL.z, 0.42);
-  label('Pool', POOL.x, 9, POOL.z, '#8fe0ff');
-  [[85, -60], [95, -40], [105, -20], [80, -85]].forEach(function (o) { house(o[0], o[1], 8, 6, 3.5, 0x9c7a54, 0x3b9a57); });
-  label('Camp Curiosity', 45, 18, -45, '#8ff0a8');
-  // farm
-  house(125, -125, 14, 22, 8, 0xa3302a, 0x3f4247);
-  var silo = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, 16, 16), lam(0xcfd6db)); silo.position.set(139, 8.6, -129); scene.add(silo); circles.push({ x: 139, z: -129, r: 3.4 });
-  var sc = new THREE.Mesh(new THREE.ConeGeometry(3.6, 3, 16), lam(0x9aa3aa)); sc.position.set(139, 18, -129); scene.add(sc);
-  label('The Farm', 125, 20, -125);
-  // pond, river, bridge
-  label('Pond', POND.x, 8, POND.z, '#8fe0ff'); label('Creek', -120, 8, riverZ(-120), '#8fe0ff');
-  var bz = riverZ(BRIDGE.x);
-  bx(BRIDGE.half * 2, 0.3, 46, 0x8a6440, BRIDGE.x, BRIDGE.top - 0.15, bz);
-  [-1, 1].forEach(function (s) { bx(0.25, 1, 40, 0x6b4a2e, BRIDGE.x + s * BRIDGE.half, BRIDGE.top + 0.5, bz); solid(BRIDGE.x + s * (BRIDGE.half + 0.3), bz, 0.5, 40); });
-  label('Bridge', BRIDGE.x, 9, bz);
-  // jump ramp
+CM.build(scene, { x: 0, z: 0 }, groundH, {
+  label: function (t, x, y, z, c) { label(t, x, y, z, c); },
+  solid: function (x0, x1, z0, z1) { boxes.push({ x0: x0, x1: x1, z0: z0, z1: z1 }); },
+  poolWaterY: 0.02, pondY: 0
+});
+(function ramp() {
   var rs = new THREE.Shape(); rs.moveTo(RAMP.x0, 0); rs.lineTo(RAMP.x1, 0); rs.lineTo(RAMP.x1, RAMP.h); rs.lineTo(RAMP.x0, 0);
   var rg = new THREE.ExtrudeGeometry(rs, { depth: RAMP.w * 2, bevelEnabled: false }); rg.translate(0, 0, -RAMP.w);
-  var ramp = new THREE.Mesh(rg, lam(0xb08a5a)); ramp.position.set(0, groundH(RAMP.x0, RAMP.z) + 0.03, RAMP.z); scene.add(ramp);
+  var ramp = new THREE.Mesh(rg, lam(0xb08a5a)); ramp.position.set(0, baseH(RAMP.x0, RAMP.z) + 0.03, RAMP.z); scene.add(ramp);
   label('Jump!', (RAMP.x0 + RAMP.x1) / 2, 9, RAMP.z, '#ffcf3a');
-  // big field
-  flatPlane(80, 45, 0x74b84a, -10, -95, 0.62).position.y = 0.61;
-  // sign
-  bx(9, 3, 0.4, 0x2e7d4f, -24, 2.6, 172); solid(-24, 172, 9, 1);
-  label('Camp Curiosity · 4425 Landisville Rd', -24, 8, 172);
 })();
 // trees
 (function () {
-  var N = 700, F = GFX.forest(scene, N);
+  var N = 1100, F = GFX.forest(scene, N);
   var m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new V3(), n = 0, tries = 0;
   while (n < N && tries < 20000) {
     tries++;
     var x = (rnd() - 0.5) * 760, z = (rnd() - 0.5) * 760, h = groundH(x, z);
-    var ring = Math.max(Math.abs(x), Math.abs(z)) > 250;
     if (h < 0.3) continue;
-    if (!ring && (rnd() < 0.82 || (Math.abs(x) < 170 && Math.abs(z + 5) < 185))) continue;
-    if (onRoad(x, z) || Math.abs(z - riverZ(x)) < 20) continue;
+    var ok = CM.treeOK(x, z); if (!ok || rnd() > ok) continue;
+    if (CM.inside(x, z, 4)) continue;
     var hit = false; for (var i = 0; i < boxes.length && !hit; i++) { var b = boxes[i]; if (x > b.x0 - 5 && x < b.x1 + 5 && z > b.z0 - 5 && z < b.z1 + 5) hit = true; }
     if (hit) continue;
     var sc = 0.8 + rnd() * 0.7;
@@ -467,9 +645,11 @@ function label(text, x, y, z, color) {
 })();
 
 // ---------------- Stars to collect ----------------
-var STAR_SPOTS = [[POOL.x + 4, POOL.z, 'in the pool'], [POND.x, POND.z, 'in the pond'], [BRIDGE.x - 30, riverZ(BRIDGE.x - 30), 'in the creek'], [RAMP.x1 + 10, RAMP.z, 'off the jump', 4.5],
-  [55, 75, 'on the courts'], [-55, 116, 'at the Pickle Barn'], [-70, -40, 'at the playground'], [45, -45, 'under the pavilion'],
-  [150, -100, 'by the farm'], [-200, 60, 'in the far field'], [-10, 140, 'in the parking lot'], [110, -232, 'across the bridge']];
+var SP = CM.SPOTS;
+var STAR_SPOTS = [[CM.POOL.x, CM.POOL.z, 'in the pool'], [SP.pond.x + 10, SP.pond.z, 'in the pond'], [-120, CM.creekZ(-120), 'in Pine Run creek'], [RAMP.x1 + 10, RAMP.z, 'off the jump', 4.5],
+  [SP.courts.x, SP.courts.z, 'on courts 1–12'], [-128, -48, 'at the Pickle Barn'], [SP.academy.x, SP.academy.z + 4, 'at Curiosity Academy'], [SP.courts2.x, SP.courts2.z + 2, 'on courts 13–16'],
+  [-150, -105, 'at the farm'], [SP.sand.x, SP.sand.z, 'in the sand lot'], [SP.gazebo.x, SP.gazebo.z + 6, 'by the gazebo'], [SP.bridge.x, SP.bridge.z - 30, 'across the bridge'],
+  [SP.minigolf.x, SP.minigolf.z, 'at mini golf'], [72, 19, 'on the sport court']];
 var starGeo = (function () { var s = new THREE.Shape(); for (var i = 0; i < 10; i++) { var r = i % 2 ? 0.45 : 1, a = i / 10 * Math.PI * 2 - Math.PI / 2; if (i === 0) s.moveTo(Math.cos(a) * r, Math.sin(a) * r); else s.lineTo(Math.cos(a) * r, Math.sin(a) * r); } var g = new THREE.ExtrudeGeometry(s, { depth: 0.3, bevelEnabled: false }); g.translate(0, 0, -0.15); return g; })();
 var stars = STAR_SPOTS.map(function (p) {
   var m = new THREE.Mesh(starGeo, new THREE.MeshLambertMaterial({ color: 0xffd400, emissive: 0x806a00 }));
@@ -482,6 +662,7 @@ var VEH = {
   mgb: { name: '1973 MGB', sub: 'Classic British roadster in mustard yellow', max: 28, acc: 6.5, steer: 0.55, wb: 2.3, grip: 0.92, swim: false, wade: 0.35, r: 1.7 },
   amphi: { name: 'Amphi Cruiser', sub: 'Amphibious car — drives into the pond, pool & creek', max: 17, acc: 4.8, steer: 0.55, wb: 2.2, grip: 0.85, swim: true, wade: 9, r: 1.7, waterMax: 6.5 },
   utv: { name: 'Farm UTV', sub: 'Off-road utility vehicle with a dump bed', max: 16, acc: 6, steer: 0.6, wb: 2.0, grip: 0.9, swim: false, wade: 0.7, r: 1.5 },
+  jd: { name: '1973 John Deere 4230', sub: 'Tractor pulling the Camp Curiosity hay wagon', max: 8, acc: 3, steer: 0.6, wb: 2.6, grip: 0.95, swim: false, wade: 0.6, r: 1.9 },
   cart: { name: 'Camp Golf Cart', sub: 'Slow, steady and great for the camp paths', max: 8.5, acc: 3.5, steer: 0.65, wb: 1.7, grip: 0.95, swim: false, wade: 0.3, r: 1.3 }
 };
 function mesh(g, m, x, y, z) { var o = new THREE.Mesh(g, m); o.position.set(x || 0, y || 0, z || 0); return o; }
@@ -564,8 +745,60 @@ function buildCart() {
   return { root: root, A: A };
 }
 scene.traverse(function (o) { if (o.isMesh && o !== water && o !== poolWater && !o.material.isShaderMaterial) { o.receiveShadow = true; if (o.geometry.type !== 'PlaneGeometry' && o.geometry.type !== 'CircleGeometry') o.castShadow = true; } });
-var BUILD = { mgb: buildMGB, amphi: buildAmphi, utv: buildUTV, cart: buildCart }, CARS = ['mgb', 'amphi', 'utv', 'cart'], models = {};
-CARS.forEach(function (k) { models[k] = BUILD[k](); GFX.upgrade(models[k].root, { metal: 0.3, rough: 0.4 }); models[k].root.visible = false; scene.add(models[k].root); });
+
+function buildJD() {
+  var root = new THREE.Group(), A = {}, green = new THREE.MeshPhongMaterial({ color: 0x2f8a3a, shininess: 60 }), yellow = new THREE.MeshPhongMaterial({ color: 0xf2c51f, shininess: 60 }), dark = lam(0x1d2a1f);
+  root.add(cbox(1.0, 0.9, 2.3, green, 0, 1.25, 0.75));                 // hood
+  root.add(cbox(1.02, 0.08, 2.3, yellow, 0, 1.6, 0.75));               // yellow hood stripe
+  root.add(cbox(0.9, 0.75, 0.06, dark, 0, 1.22, 1.92));                // grille
+  for (var g = 0; g < 7; g++) root.add(cbox(0.03, 0.7, 0.02, lam(0x3a4a3c), -0.4 + g * 0.13, 1.22, 1.95));
+  root.add(cbox(0.9, 0.6, 1.2, green, 0, 0.85, 0.65));                 // engine block
+  root.add(cbox(1.1, 0.7, 1.2, green, 0, 1.0, -0.75));                 // transmission / platform
+  [-1, 1].forEach(function (s) { root.add(cbox(0.55, 0.12, 1.25, green, s * 0.95, 1.75, -0.75)); root.add(cbox(0.1, 0.55, 1.25, green, s * 0.68, 1.5, -0.75)); });  // fenders
+  var seat = cbox(0.6, 0.12, 0.5, yellow, 0, 1.75, -0.9); root.add(seat); root.add(cbox(0.6, 0.45, 0.12, yellow, 0, 2.0, -1.15));
+  var sw = new THREE.TorusGeometry(0.2, 0.025, 6, 16); var swm = mesh(sw, BLACK, 0, 2.05, -0.35); swm.rotation.x = -0.9; root.add(swm);
+  root.add(cbox(0.04, 0.4, 0.04, BLACK, 0, 1.9, -0.25));
+  [[-0.62, -0.25], [0.62, -0.25], [-0.62, -1.3], [0.62, -1.3]].forEach(function (p) { root.add(cbox(0.08, 1.4, 0.08, green, p[0], 2.45, p[1])); });  // ROPS
+  root.add(cbox(1.5, 0.1, 1.4, green, 0, 3.15, -0.78));               // canopy roof
+  [-0.6, 0.6].forEach(function (x) { root.add(cbox(0.14, 0.08, 0.06, new THREE.MeshBasicMaterial({ color: 0xff9a1a }), x, 3.12, -0.06)); });
+  var ex = new THREE.CylinderGeometry(0.07, 0.07, 1.5, 10); root.add(mesh(ex, BLACK, 0.25, 2.3, 1.4));
+  [-0.42, 0.42].forEach(function (x) { root.add(mesh(new THREE.CircleGeometry(0.1, 12), LIGHT, x, 1.95, -0.2)); });
+  // wheels: big rear, narrow tricycle-style front pair
+  A.wheels = [];
+  function tire(r, w, x, y, z, front) {
+    var gW = new THREE.Group(); gW.position.set(x, y, z);
+    var t = new THREE.CylinderGeometry(r, r, w, 22); t.rotateZ(Math.PI / 2); gW.add(mesh(t, TIRE));
+    var h = new THREE.CylinderGeometry(r * 0.62, r * 0.62, w + 0.03, 16); h.rotateZ(Math.PI / 2); gW.add(mesh(h, yellow));
+    for (var s = 0; s < 10; s++) { var lug = cbox(w + 0.04, 0.08, r * 0.25, TIRE); lug.position.y = r; var pv = new THREE.Group(); pv.rotation.x = s * Math.PI / 5; pv.add(lug); gW.add(pv); }
+    root.add(gW); A.wheels.push(gW); return gW;
+  }
+  tire(0.86, 0.45, -0.98, 0.86, -0.75); tire(0.86, 0.45, 0.98, 0.86, -0.75);
+  A.front = [tire(0.4, 0.22, -0.32, 0.4, 1.6, true), tire(0.4, 0.22, 0.32, 0.4, 1.6, true)];
+  root.add(cbox(0.1, 0.1, 0.9, BLACK, 0, 0.45, -1.7));                 // drawbar
+  A.cam = new V3(0, 2.6, -0.9);
+  // hay wagon (separate, towed)
+  var wag = new THREE.Group(), wood = lam(0xc9a26b), frame = lam(0x2f6b3a), blackF = lam(0x1d1d1d);
+  wag.add(cbox(2.4, 0.18, 5.6, blackF, 0, 1.0, 0));
+  wag.add(cbox(2.3, 0.08, 5.5, wood, 0, 1.12, 0));
+  [-1, 1].forEach(function (s) {
+    for (var r = 0; r < 3; r++) wag.add(cbox(0.05, 0.14, 5.5, wood, s * 1.15, 1.35 + r * 0.25, 0));
+    for (var p = 0; p < 8; p++) wag.add(cbox(0.08, 0.95, 0.08, frame, s * 1.17, 1.6, -2.7 + p * 0.77));
+  });
+  for (var r2 = 0; r2 < 3; r2++) { wag.add(cbox(2.3, 0.14, 0.05, wood, 0, 1.35 + r2 * 0.25, -2.75)); wag.add(cbox(2.3, 0.14, 0.05, wood, 0, 1.35 + r2 * 0.25, 2.75)); }
+  var sign = (function () { var c = document.createElement('canvas'); c.width = 512; c.height = 128; var x = c.getContext('2d'); x.fillStyle = '#2f6b3a'; x.fillRect(0, 0, 512, 128); x.fillStyle = '#fff'; x.font = 'bold 44px Arial'; x.textAlign = 'center'; x.fillText('CAMP CURIOSITY', 256, 54); x.fillText('CURIOSITY ACADEMY', 256, 108); var t = new THREE.CanvasTexture(c); t.anisotropy = 4; return new THREE.MeshLambertMaterial({ map: t }); })();
+  [-1, 1].forEach(function (s) { var sg = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.42), sign); sg.position.set(s * 1.22, 1.62, 1.2); sg.rotation.y = s * Math.PI / 2; wag.add(sg); });
+  var canvasM = new THREE.MeshLambertMaterial({ color: 0xf1ead6, side: THREE.DoubleSide });
+  var arch = new THREE.CylinderGeometry(1.25, 1.25, 5.6, 20, 1, true, -Math.PI / 2, Math.PI); arch.rotateX(-Math.PI / 2); arch.scale(1, 0.55, 1);
+  var cov = new THREE.Mesh(arch, canvasM); cov.position.y = 2.15; wag.add(cov);
+  for (var b = 0; b < 7; b++) { var hoop = new THREE.Mesh(new THREE.TorusGeometry(1.22, 0.025, 4, 16, Math.PI), lam(0xcccccc)); hoop.scale.y = 0.55; hoop.position.set(0, 2.15, -2.7 + b * 0.9); wag.add(hoop); [-1, 1].forEach(function (s) { wag.add(cbox(0.04, 0.55, 0.04, lam(0xcccccc), s * 1.2, 1.9, -2.7 + b * 0.9)); }); }
+  A.wagWheels = [];
+  [[-1.0, 1.9], [1.0, 1.9], [-1.0, -1.9], [1.0, -1.9]].forEach(function (p) { var gW = new THREE.Group(); gW.position.set(p[0], 0.45, p[1]); var t = new THREE.CylinderGeometry(0.45, 0.45, 0.25, 16); t.rotateZ(Math.PI / 2); gW.add(mesh(t, TIRE)); var h = new THREE.CylinderGeometry(0.28, 0.28, 0.27, 12); h.rotateZ(Math.PI / 2); gW.add(mesh(h, yellow)); wag.add(gW); A.wagWheels.push(gW); });
+  wag.add(cbox(0.1, 0.1, 2.0, blackF, 0, 0.9, 3.6));                    // tongue
+  A.trailer = wag; A.trailerLen = 5.8; A.hitch = 2.1;
+  return { root: root, A: A };
+}
+var BUILD = { mgb: buildMGB, amphi: buildAmphi, jd: buildJD, utv: buildUTV, cart: buildCart }, CARS = ['mgb', 'amphi', 'jd', 'utv', 'cart'], models = {};
+CARS.forEach(function (k) { models[k] = BUILD[k](); GFX.upgrade(models[k].root, { metal: 0.3, rough: 0.4 }); if (models[k].A.trailer) { GFX.upgrade(models[k].A.trailer, { metal: 0.05, rough: 0.7 }); models[k].A.trailer.visible = false; scene.add(models[k].A.trailer); } models[k].root.visible = false; scene.add(models[k].root); });
 
 // particles
 var NP = 900, pPos = new Float32Array(NP * 3), pVel = new Float32Array(NP * 3), pLife = new Float32Array(NP), pCol = new Float32Array(NP * 3), pNext = 0;
@@ -575,13 +808,14 @@ var parts = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.25, vertex
 function emit(x, y, z, vx, vy, vz, life, r, g, b) { var i = pNext; pNext = (pNext + 1) % NP; pPos[i * 3] = x; pPos[i * 3 + 1] = y; pPos[i * 3 + 2] = z; pVel[i * 3] = vx; pVel[i * 3 + 1] = vy; pVel[i * 3 + 2] = vz; pLife[i] = life; pCol[i * 3] = r; pCol[i * 3 + 1] = g; pCol[i * 3 + 2] = b; }
 
 // ---------------- Car state & physics ----------------
-var C = { car: 'mgb', x: -10, z: 160, y: 0.7, yaw: Math.PI, spd: 0, vy: 0, steer: 0, air: false, swim: false, pitch: 0, roll: 0, lastSafe: null, state: 'ok', resetT: 0 };
+var C = { car: 'mgb', x: 97, z: 108, y: 0.7, yaw: Math.PI, spd: 0, vy: 0, steer: 0, air: false, swim: false, pitch: 0, roll: 0, lastSafe: null, state: 'ok', resetT: 0 };
 var game = { playing: false, paused: true, cam: 0, sound: true, got: 0, time: 0 };
 var input = { steer: 0, gas: false, brake: false, keys: {} };
 function spawnCar() {
-  C.x = -10; C.z = 160; C.yaw = Math.PI; C.spd = 0; C.vy = 0; C.air = false; C.swim = false; C.state = 'ok';
+  C.x = 97; C.z = 108; C.yaw = Math.PI; C.spd = 0; C.vy = 0; C.air = false; C.swim = false; C.state = 'ok';
   C.y = groundH(C.x, C.z); C.lastSafe = { x: C.x, z: C.z, yaw: C.yaw };
-  CARS.forEach(function (k) { models[k].root.visible = k === C.car; });
+  CARS.forEach(function (k) { models[k].root.visible = k === C.car; if (models[k].A.trailer) models[k].A.trailer.visible = k === C.car; });
+  C.tx = null;
   $('carName').textContent = VEH[C.car].name.toUpperCase();
   if (typeof camPos !== 'undefined') camPos.set(C.x - Math.sin(C.yaw) * 8, C.y + 3.2, C.z - Math.cos(C.yaw) * 8);
 }
@@ -590,8 +824,8 @@ var fw = new V3(), _v = new V3();
 function stepCar(dt) {
   if (C.state !== 'ok') return;
   var V = VEH[C.car], k = input.keys;
-  var steerIn = clamp(input.steer + ((k.arrowright || k.d) ? 1 : 0) - ((k.arrowleft || k.a) ? 1 : 0), -1, 1);
-  var gas = input.gas || k.arrowup || k.w, brake = input.brake || k.arrowdown || k.s;
+  var steerIn = clamp(input.steer + (k.d ? 1 : 0) - (k.a ? 1 : 0), -1, 1);      // left hand: A / D steer
+  var gas = input.gas || k.arrowup, brake = input.brake || k.arrowdown;             // right hand: arrow up / down pedals
   C.steer += (steerIn - C.steer) * Math.min(1, dt * 6);
   var s0 = surface(C.x, C.z), inWater = s0.depth > 0.5 && !C.air;
   if (s0.depth > V.wade && !V.swim && !C.air) { C.state = 'stall'; C.resetT = 2.4; toast('💦 Splash! Only the Amphi Cruiser can swim.', 2.4); splash(C.x, C.z, 60); return; }
@@ -681,6 +915,7 @@ var SIL = {
   mgb: '<svg viewBox="0 0 120 50"><path d="M8 34v-8c0-3 3-5 8-5l26-1 10-6h14l8 6 28 1c6 0 10 3 11 8v5z" fill="#cf9f2b"/><rect x="6" y="32" width="10" height="3" fill="#ddd"/><rect x="104" y="32" width="12" height="3" fill="#ddd"/><circle cx="28" cy="36" r="7" fill="#222"/><circle cx="28" cy="36" r="4" fill="#ccc"/><circle cx="92" cy="36" r="7" fill="#222"/><circle cx="92" cy="36" r="4" fill="#ccc"/><path d="M70 14l-4 6h6z" fill="#9fc3e0"/></svg>',
   amphi: '<svg viewBox="0 0 120 50"><path d="M8 20h84l18 6c-2 8-10 10-16 10H10z" fill="#2fb7b0"/><rect x="8" y="18" width="86" height="3" fill="#fff"/><path d="M68 18l-4-8h6z" fill="#9fc3e0"/><circle cx="30" cy="36" r="7" fill="#222"/><circle cx="30" cy="36" r="4" fill="#fff"/><circle cx="88" cy="36" r="7" fill="#222"/><circle cx="88" cy="36" r="4" fill="#fff"/><path d="M0 44c10-4 20 4 30 0s20 4 30 0 20 4 30 0 20 4 30 0" stroke="#41b8e8" stroke-width="3" fill="none"/></svg>',
   utv: '<svg viewBox="0 0 120 50"><rect x="14" y="22" width="88" height="10" fill="#3d6b35"/><rect x="20" y="16" width="34" height="10" fill="#2f5a2a"/><path d="M58 22V8h36v14" stroke="#111" stroke-width="3" fill="none"/><circle cx="32" cy="36" r="9" fill="#222"/><circle cx="32" cy="36" r="4" fill="#f2c230"/><circle cx="88" cy="36" r="9" fill="#222"/><circle cx="88" cy="36" r="4" fill="#f2c230"/></svg>',
+  jd: '<svg viewBox="0 0 120 50"><rect x="56" y="8" width="30" height="3" fill="#2f8a3a"/><path d="M60 11v14M84 11v14" stroke="#2f8a3a" stroke-width="2"/><rect x="84" y="22" width="30" height="10" fill="#2f8a3a"/><rect x="84" y="22" width="30" height="2" fill="#f2c51f"/><circle cx="68" cy="34" r="11" fill="#222"/><circle cx="68" cy="34" r="6" fill="#f2c51f"/><circle cx="106" cy="39" r="6" fill="#222"/><circle cx="106" cy="39" r="3" fill="#f2c51f"/><path d="M2 22c8-12 38-12 46 0" fill="#f1ead6"/><rect x="2" y="22" width="46" height="12" fill="#c9a26b"/><circle cx="12" cy="39" r="4" fill="#222"/><circle cx="38" cy="39" r="4" fill="#222"/></svg>',
   cart: '<svg viewBox="0 0 120 50"><rect x="22" y="24" width="76" height="10" fill="#f3f3f1"/><rect x="26" y="6" width="70" height="4" fill="#2e7d4f"/><path d="M34 10v14M88 10v14" stroke="#999" stroke-width="3"/><rect x="40" y="18" width="20" height="6" fill="#2e7d4f"/><circle cx="36" cy="37" r="6" fill="#222"/><circle cx="86" cy="37" r="6" fill="#222"/></svg>'
 };
 function buildMenu() {
@@ -705,12 +940,12 @@ hold($('bGas'), 'gas'); hold($('bBrake'), 'brake');
   el.addEventListener('pointermove', function (e) { if (e.pointerId !== id) return; input.steer = clamp((e.clientX - sx) / (el.clientWidth * 0.45), -1, 1); });
   var end = function (e) { if (e.pointerId !== id) return; id = null; input.steer = 0; }; el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
 })();
-addEventListener('keydown', function (e) { var k = e.key.toLowerCase(); input.keys[k] = true; if (k === 'h') horn(); if (e.key.indexOf('Arrow') === 0 || k === ' ') e.preventDefault(); });
+addEventListener('keydown', function (e) { var k = e.key.toLowerCase(); input.keys[k] = true; if (k === 'h' || k === ' ') horn(); if (e.key.indexOf('Arrow') === 0 || k === ' ') e.preventDefault(); });
 addEventListener('keyup', function (e) { input.keys[e.key.toLowerCase()] = false; });
 document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
 
 // ---------------- Loop ----------------
-var camPos = new V3(-10, 6, 175), lookAt = new V3(), spin = 0;
+var camPos = new V3(97, 6, 118), lookAt = new V3(), spin = 0;
 function update(dt) {
   game.time += dt; waterTex.offset.x += dt * 0.006;
   if (game.playing && !game.paused) {
@@ -731,10 +966,20 @@ function render(dt) {
   spin += C.spd * dt / 0.33;
   A.wheels.forEach(function (w) { w.rotation.x = spin; });
   A.front.forEach(function (w) { w.rotation.y = C.steer * VEH[C.car].steer; w.rotation.order = 'YXZ'; });
+  if (A.trailer) {
+    var hx = C.x - Math.sin(C.yaw) * A.hitch, hz = C.z - Math.cos(C.yaw) * A.hitch;
+    if (C.tx === null || C.tx === undefined) { C.tx = hx - Math.sin(C.yaw) * A.trailerLen; C.tz = hz - Math.cos(C.yaw) * A.trailerLen; }
+    var tdx = hx - C.tx, tdz = hz - C.tz, tl = Math.hypot(tdx, tdz) || 1;
+    C.tx = hx - tdx / tl * A.trailerLen; C.tz = hz - tdz / tl * A.trailerLen;
+    var mx = (hx + C.tx) / 2, mz = (hz + C.tz) / 2, ty = Math.max(groundH(mx, mz), C.swim ? -0.3 : -5);
+    A.trailer.position.set(mx, ty, mz); A.trailer.rotation.set(0, Math.atan2(tdx, tdz), 0);
+    A.wagWheels.forEach(function (w) { w.rotation.x = spin * 0.8; });
+  }
   if (A.props) A.props.forEach(function (p, i) { p.rotation.z += (C.swim ? C.spd * 4 : 0) * dt * (i ? -1 : 1); });
   var fwx = Math.sin(C.yaw), fwz = Math.cos(C.yaw);
   if (game.cam === 0) {
-    var want = _v.set(C.x - fwx * 8, C.y + 3.2, C.z - fwz * 8);
+    var cd = C.car === 'jd' ? 17 : 8, ch = C.car === 'jd' ? 7 : 3.2;
+    var want = _v.set(C.x - fwx * cd, C.y + ch, C.z - fwz * cd);
     var g = Math.max(groundH(want.x, want.z), 0) + 1; if (want.y < g) want.y = g;
     camPos.lerp(want, 1 - Math.exp(-dt * 4)); camera.position.copy(camPos); lookAt.set(C.x + fwx * 3, C.y + 1, C.z + fwz * 3); camera.lookAt(lookAt);
   } else if (game.cam === 1) {
