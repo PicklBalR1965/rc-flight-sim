@@ -56,10 +56,11 @@
   #thrBar { position: absolute; left: -16px; top: 10px; bottom: 10px; width: 8px; border-radius: 4px;
     background: rgba(0,0,0,.4); overflow: hidden; pointer-events: none; }
   #thrBar i { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(#ffcf3a, #ff7b2e); }
-  #menu { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+  #menu { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-start; justify-content: center; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); box-sizing: border-box;
     background: radial-gradient(ellipse at top, rgba(20,60,90,.7), rgba(5,15,25,.88)); overflow-y: auto; touch-action: pan-y; }
   #menu.hidden { display: none; }
-  .card { width: min(760px, 94vw); padding: 22px 24px 20px; margin: 20px 0; background: rgba(10, 24, 38, .85);
+  .card { width: min(760px, 94vw); padding: 22px 24px 20px; margin: auto; margin-top: max(20px, auto); box-sizing: border-box; background: rgba(10, 24, 38, .85);
     border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
   .card h1 { margin: 0; font-size: 30px; letter-spacing: -.01em; }
   .card h1 span { color: var(--accent); }
@@ -112,7 +113,8 @@
     .tb { padding: 5px 8px; font-size: 11px; border-radius: 9px; }
     #msg { font-size: 17px; }
     #ringInfo { font-size: 12px; padding: 4px 10px; top: calc(env(safe-area-inset-top) + 46px); }
-    .card { padding: 14px 14px; } .card h1 { font-size: 22px; } .opt svg { height: 34px; }
+    .card { padding: 14px 14px; margin: 12px auto; } .card h1 { font-size: 22px; } .card .sub { font-size: 12px; margin-bottom: 10px; } .opt svg { height: 30px; margin-bottom: 2px; }
+    .opt { padding: 7px 9px; flex-basis: 130px; } .opt .t { font-size: 13px; } .opt .d { font-size: 10.5px; } .help { font-size: 12px; } #go { padding: 12px; font-size: 17px; margin-top: 12px; }
     .stick { width: 112px; height: 112px; border-radius: 24px; bottom: calc(env(safe-area-inset-bottom) + 10px); }
     #stickL { left: calc(env(safe-area-inset-left) + 12px); } #stickR { right: calc(env(safe-area-inset-right) + 12px); }
     .stick .knob { width: 42px; height: 42px; margin: -21px 0 0 -21px; }
