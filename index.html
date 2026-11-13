@@ -1367,10 +1367,45 @@ function buildAF1() {
   leds(root, 0.98, -0.05, -0.36); A.fpv = new V3(0, 0.08, 0.8); return { root: root, A: A };
 }
 
+
+function buildCivHeli() {
+  var root = new THREE.Group(), A = { props: [] };
+  var white = new THREE.MeshPhongMaterial({ color: 0xf4f5f2, shininess: 80 }), green = new THREE.MeshPhongMaterial({ color: 0x2e8b57, shininess: 60 }), blue = new THREE.MeshPhongMaterial({ color: 0x3d7fc1, shininess: 60 });
+  var tint = new THREE.MeshPhongMaterial({ color: 0x1d3346, transparent: true, opacity: 0.55, shininess: 120, specular: 0xbfdcf0 });
+  // cabin: rounded body with a big glass bubble in front
+  var body = new THREE.SphereGeometry(1, 20, 14); body.scale(0.15, 0.15, 0.26); root.add(mesh(body, white, 0, 0.02, 0.0));
+  var bubble = new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62); bubble.rotateX(Math.PI / 2 + 0.25); bubble.scale(0.145, 0.15, 0.2);
+  root.add(mesh(bubble, tint, 0, 0.04, 0.14));
+  root.add(box(0.302, 0.03, 0.42, green, 0, -0.04, -0.02));                    // green belt line
+  root.add(box(0.304, 0.012, 0.42, blue, 0, -0.065, -0.02));
+  root.add(box(0.16, 0.08, 0.2, white, 0, 0.16, -0.06));                       // engine fairing
+  root.add(tube(0.012, 0.012, 0.09, lam(0x777777), 0, 0.24, -0.04).rotateX(Math.PI / 2));   // mast
+  // tail boom, fin, stabilizer
+  root.add(tube(0.035, 0.016, 0.62, white, 0, 0.05, -0.5));
+  root.add(box(0.01, 0.02, 0.6, green, 0, 0.065, -0.5));
+  root.add(fin([[-0.72, 0.04], [-0.84, 0.04], [-0.88, 0.2], [-0.8, 0.2]], 0.012, green));
+  root.add(fin([[-0.76, 0.04], [-0.84, 0.04], [-0.86, -0.06], [-0.8, -0.06]], 0.012, white));
+  root.add(panel([[-0.1, -0.68], [0.1, -0.68], [0.1, -0.72], [-0.1, -0.72]], 0.008, white).translateY(0.05));
+  // landing skids
+  [-1, 1].forEach(function (s) {
+    var sk = tube(0.012, 0.012, 0.5, lam(0x9aa0a6), s * 0.13, -0.2, 0.0); root.add(sk);
+    var tip = tube(0.012, 0.012, 0.06, lam(0x9aa0a6), s * 0.13, -0.19, 0.27); tip.rotation.x = -0.6; root.add(tip);
+    [0.1, -0.12].forEach(function (z) { var st = box(0.012, 0.12, 0.012, lam(0x9aa0a6), s * 0.11, -0.14, z); st.rotation.z = s * 0.35; root.add(st); });
+  });
+  // registration / logo
+  var logo = canvasTex(256, 64, function (c, w, h) { c.fillStyle = '#f4f5f2'; c.fillRect(0, 0, w, h); c.fillStyle = '#2e8b57'; c.font = 'bold 30px Arial'; c.textAlign = 'center'; c.fillText('CAMP CURIOSITY', w / 2, 42); });
+  [-1, 1].forEach(function (s) { var p = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.05), new THREE.MeshLambertMaterial({ map: logo })); p.position.set(s * 0.152, 0.05, -0.08); p.rotation.y = s * Math.PI / 2; root.add(p); });
+  // rotors (main first, tail second — same order the animation expects)
+  var r = propeller(0.8, 2, 0.05); var hold = new THREE.Group(); hold.rotation.x = -Math.PI / 2; hold.position.set(0, 0.28, -0.04); hold.add(r); root.add(hold); A.props.push(r);
+  var tr = propeller(0.12, 2); var th = new THREE.Group(); th.rotation.y = Math.PI / 2; th.position.set(0.02, 0.14, -0.86); th.add(tr); root.add(th); A.props.push(tr);
+  root.add(mesh(new THREE.SphereGeometry(0.014, 6, 6), M.ledR, 0.0, 0.2, -0.88));
+  A.fpv = new V3(0, 0.08, 0.2); return { root: root, A: A };
+}
 var BUILDERS = { trainer: buildTrainer, seaplane: buildSeaplane, warbird: buildWarbird, jet: buildJet, a10: buildA10, b2: buildB2, heli: buildHeli, osprey: buildOsprey, af1: buildAF1 };
 if (TOUR) { T.heli.name = 'Curiosity Helicopter'; T.heli.sub = 'Hover, spin and fly anywhere over campus'; }
 var PLANES = TOUR ? ['trainer', 'heli'] : ['trainer', 'seaplane', 'warbird', 'jet', 'a10', 'b2', 'heli', 'osprey', 'af1'];
 var models = {};
+if (TOUR) BUILDERS.heli = buildCivHeli;
 scene.traverse(function (o) { if (o.isMesh && !o.material.isShaderMaterial && o !== water) o.receiveShadow = true; });
 PLANES.forEach(function (k) { var m = BUILDERS[k](); GFX.upgrade(m.root); m.root.scale.setScalar(T[k].scale); m.root.visible = false; scene.add(m.root); models[k] = m; });
 
@@ -2052,7 +2087,7 @@ function render(dt) {
   shadow.position.set(S.pos.x, gH + 0.08, S.pos.z); shadow.material.opacity = hgt < 60 ? 0 : clamp(0.32 - hgt * 0.004, 0, 0.25); shadow.scale.setScalar(sc * (0.8 + hgt * 0.01));
   pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true;
   updateCamera(dt); updateMarkers(); updateAudio();
-  labels.forEach(function (l) { var d = l.position.distanceTo(camera.position); l.visible = d < 1400; var s = clamp(d / 22, 14, 60); l.scale.set(s * 5.3, s, 1); });
+  labels.forEach(function (l) { var d = l.position.distanceTo(camera.position); l.visible = d < 1400 && d > 45; var s = clamp(d / 22, 14, 60); l.scale.set(s * 5.3, s, 1); });
   sky.position.copy(camera.position);
   renderer.render(scene, camera);
 }
