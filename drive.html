@@ -255,7 +255,49 @@ var GFX = (function () {
     };
   }
 
-  return { setup: setup, follow: follow, upgrade: upgrade, grainTex: grainTex, forest: forest, lowEnd: lowEnd };
+
+  // Realistic-ish engine: filtered brown noise + low "putter" body, pulsed at firing / rotor rate. Quiet by default.
+  function engine(ac) {
+    var len = ac.sampleRate * 2, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0), last = 0;
+    for (var i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
+    var src = ac.createBufferSource(); src.buffer = buf; src.loop = true;
+    var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 300; lp.Q.value = 0.7;
+    var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 0.6;
+    var nGain = ac.createGain(), jGain = ac.createGain(); nGain.gain.value = 0; jGain.gain.value = 0;
+    var body = ac.createOscillator(); body.type = 'triangle'; body.frequency.value = 40;
+    var bLp = ac.createBiquadFilter(); bLp.type = 'lowpass'; bLp.frequency.value = 160;
+    var bGain = ac.createGain(); bGain.gain.value = 0;
+    var pulse = ac.createGain(); pulse.gain.value = 0.6;                       // amplitude pulsing (putter / rotor whop)
+    var lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 12;
+    var lfoAmt = ac.createGain(); lfoAmt.gain.value = 0.35; lfo.connect(lfoAmt); lfoAmt.connect(pulse.gain);
+    var master = ac.createGain(); master.gain.value = 0;
+    var comp = ac.createDynamicsCompressor();
+    src.connect(lp); lp.connect(nGain); nGain.connect(pulse);
+    src.connect(bp); bp.connect(jGain); jGain.connect(master);
+    body.connect(bLp); bLp.connect(bGain); bGain.connect(pulse);
+    pulse.connect(master); master.connect(comp); comp.connect(ac.destination);
+    src.start(); body.start(); lfo.start();
+    var VOL = 0.55;
+    return {
+      // kind: 'prop' | 'big' (warbird/tractor) | 'jet' | 'rotor' | 'electric' ; m: 0..1 load/rpm ; on: audible
+      set: function (kind, m, on) {
+        var t = ac.currentTime, k = 0.12;
+        var jet = kind === 'jet', rotor = kind === 'rotor', elec = kind === 'electric', big = kind === 'big';
+        var fire = rotor ? 4 + m * 4 : big ? 9 + m * 22 : elec ? 0 : 14 + m * 30;
+        lfo.frequency.setTargetAtTime(Math.max(fire, 0.1), t, k);
+        lfoAmt.gain.setTargetAtTime(rotor ? 0.55 : elec || jet ? 0 : 0.35, t, k);
+        body.frequency.setTargetAtTime(big ? 32 + m * 40 : 45 + m * 70, t, k);
+        bGain.gain.setTargetAtTime(jet || elec ? 0 : rotor ? 0.18 : 0.28, t, k);
+        lp.frequency.setTargetAtTime(rotor ? 220 + m * 180 : 260 + m * (big ? 450 : 700), t, k);
+        nGain.gain.setTargetAtTime(jet ? 0.15 : elec ? 0.25 : 0.6, t, k);
+        bp.frequency.setTargetAtTime(jet ? 500 + m * 1300 : 900, t, k);
+        jGain.gain.setTargetAtTime(jet ? 0.5 * m : elec ? 0.06 * m : 0, t, k);
+        master.gain.setTargetAtTime(on ? VOL * (0.18 + m * 0.32) : 0, t, 0.15);
+      }
+    };
+  }
+
+  return { engine: engine, setup: setup, follow: follow, upgrade: upgrade, grainTex: grainTex, forest: forest, lowEnd: lowEnd };
 })();
 
 </script>
@@ -330,7 +372,6 @@ var CAMPUSMAP = (function () {
     { t: 'Mini Golf', x: 96, z: -119, h: 12 },
     { t: 'Sand Lot', x: 125, z: -54, h: 12 },
     { t: 'Gazebo', x: 160, z: 50, h: 12 },
-    { t: 'Farm & Paddocks', x: -150, z: -120, h: 14 },
     { t: 'Landisville Rd', x: -120, z: 121, h: 8 }
   ];
 
@@ -893,19 +934,20 @@ function splash(x, z, n) { for (var i = 0; i < n; i++) emit(x + (rnd() - .5) * 2
 
 // ---------------- Audio ----------------
 var ac = null, osc, filt, gain;
+var ENG = null;
 function initAudio() {
   if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
-  try { ac = new (window.AudioContext || window.webkitAudioContext)(); osc = ac.createOscillator(); osc.type = 'sawtooth'; filt = ac.createBiquadFilter(); filt.type = 'lowpass'; gain = ac.createGain(); gain.gain.value = 0; osc.connect(filt); filt.connect(gain); gain.connect(ac.destination); osc.start(); } catch (e) { ac = null; }
+  try { ac = new (window.AudioContext || window.webkitAudioContext)(); ENG = GFX.engine(ac); } catch (e) { ac = null; }
 }
 function tone(f, d, delay, type, vol) { if (!ac || !game.sound) return; try { var o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + (delay || 0); o.type = type || 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(vol || 0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + d); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + d + 0.02); } catch (e) {} }
 function chime() { tone(988, 0.1); tone(1319, 0.18, 0.1); }
 function thud() { tone(90, 0.25, 0, 'square', 0.15); }
 function horn() { tone(392, 0.35, 0, 'square', 0.08); tone(494, 0.35, 0, 'square', 0.06); }
 function updateAudio() {
-  if (!ac) return; var t = ac.currentTime, V = VEH[C.car], rpm = Math.abs(C.spd) / V.max;
-  var base = C.car === 'cart' ? 140 : C.car === 'mgb' ? 55 : 70;
-  osc.frequency.setTargetAtTime(base + rpm * base * 2.4 + (input.gas ? 15 : 0), t, 0.08); filt.frequency.setTargetAtTime(C.car === 'cart' ? 900 : 400 + rpm * 900, t, 0.1);
-  gain.gain.setTargetAtTime(game.sound && game.playing && !game.paused ? 0.05 + rpm * 0.05 : 0, t, 0.1);
+  if (!ac || !ENG) return;
+  var V = VEH[C.car], m = Math.min(1, Math.abs(C.spd) / V.max * 0.8 + (input.gas || input.keys.arrowup ? 0.2 : 0));
+  var kind = C.car === 'cart' ? 'electric' : C.car === 'jd' ? 'big' : 'prop';
+  ENG.set(kind, m, game.sound && game.playing && !game.paused);
 }
 
 // ---------------- UI ----------------

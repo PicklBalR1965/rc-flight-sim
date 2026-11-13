@@ -264,7 +264,49 @@ var GFX = (function () {
     };
   }
 
-  return { setup: setup, follow: follow, upgrade: upgrade, grainTex: grainTex, forest: forest, lowEnd: lowEnd };
+
+  // Realistic-ish engine: filtered brown noise + low "putter" body, pulsed at firing / rotor rate. Quiet by default.
+  function engine(ac) {
+    var len = ac.sampleRate * 2, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0), last = 0;
+    for (var i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
+    var src = ac.createBufferSource(); src.buffer = buf; src.loop = true;
+    var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 300; lp.Q.value = 0.7;
+    var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 0.6;
+    var nGain = ac.createGain(), jGain = ac.createGain(); nGain.gain.value = 0; jGain.gain.value = 0;
+    var body = ac.createOscillator(); body.type = 'triangle'; body.frequency.value = 40;
+    var bLp = ac.createBiquadFilter(); bLp.type = 'lowpass'; bLp.frequency.value = 160;
+    var bGain = ac.createGain(); bGain.gain.value = 0;
+    var pulse = ac.createGain(); pulse.gain.value = 0.6;                       // amplitude pulsing (putter / rotor whop)
+    var lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 12;
+    var lfoAmt = ac.createGain(); lfoAmt.gain.value = 0.35; lfo.connect(lfoAmt); lfoAmt.connect(pulse.gain);
+    var master = ac.createGain(); master.gain.value = 0;
+    var comp = ac.createDynamicsCompressor();
+    src.connect(lp); lp.connect(nGain); nGain.connect(pulse);
+    src.connect(bp); bp.connect(jGain); jGain.connect(master);
+    body.connect(bLp); bLp.connect(bGain); bGain.connect(pulse);
+    pulse.connect(master); master.connect(comp); comp.connect(ac.destination);
+    src.start(); body.start(); lfo.start();
+    var VOL = 0.55;
+    return {
+      // kind: 'prop' | 'big' (warbird/tractor) | 'jet' | 'rotor' | 'electric' ; m: 0..1 load/rpm ; on: audible
+      set: function (kind, m, on) {
+        var t = ac.currentTime, k = 0.12;
+        var jet = kind === 'jet', rotor = kind === 'rotor', elec = kind === 'electric', big = kind === 'big';
+        var fire = rotor ? 4 + m * 4 : big ? 9 + m * 22 : elec ? 0 : 14 + m * 30;
+        lfo.frequency.setTargetAtTime(Math.max(fire, 0.1), t, k);
+        lfoAmt.gain.setTargetAtTime(rotor ? 0.55 : elec || jet ? 0 : 0.35, t, k);
+        body.frequency.setTargetAtTime(big ? 32 + m * 40 : 45 + m * 70, t, k);
+        bGain.gain.setTargetAtTime(jet || elec ? 0 : rotor ? 0.18 : 0.28, t, k);
+        lp.frequency.setTargetAtTime(rotor ? 220 + m * 180 : 260 + m * (big ? 450 : 700), t, k);
+        nGain.gain.setTargetAtTime(jet ? 0.15 : elec ? 0.25 : 0.6, t, k);
+        bp.frequency.setTargetAtTime(jet ? 500 + m * 1300 : 900, t, k);
+        jGain.gain.setTargetAtTime(jet ? 0.5 * m : elec ? 0.06 * m : 0, t, k);
+        master.gain.setTargetAtTime(on ? VOL * (0.18 + m * 0.32) : 0, t, 0.15);
+      }
+    };
+  }
+
+  return { engine: engine, setup: setup, follow: follow, upgrade: upgrade, grainTex: grainTex, forest: forest, lowEnd: lowEnd };
 })();
 
 </script>
@@ -339,7 +381,6 @@ var CAMPUSMAP = (function () {
     { t: 'Mini Golf', x: 96, z: -119, h: 12 },
     { t: 'Sand Lot', x: 125, z: -54, h: 12 },
     { t: 'Gazebo', x: 160, z: 50, h: 12 },
-    { t: 'Farm & Paddocks', x: -150, z: -120, h: 14 },
     { t: 'Landisville Rd', x: -120, z: 121, h: 8 }
   ];
 
@@ -1370,14 +1411,12 @@ function feed(t) {
 
 // ---------------- Audio ----------------
 var ac = null, osc, osc2, filt, gain, noiseBuf;
+var ENG = null;
 function initAudio() {
   if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
   try {
     ac = new (window.AudioContext || window.webkitAudioContext)();
-    osc = ac.createOscillator(); osc.type = 'sawtooth'; osc2 = ac.createOscillator(); osc2.type = 'square';
-    filt = ac.createBiquadFilter(); filt.type = 'lowpass'; gain = ac.createGain(); gain.gain.value = 0;
-    var g2 = ac.createGain(); g2.gain.value = 0.35; osc.connect(filt); osc2.connect(g2); g2.connect(filt); filt.connect(gain); gain.connect(ac.destination);
-    osc.start(); osc2.start();
+    ENG = GFX.engine(ac);
     noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); var d = noiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   } catch (e) { ac = null; }
 }
@@ -1393,14 +1432,11 @@ function noise(dur, freq, vol) {
     s.connect(f); f.connect(g); g.connect(ac.destination); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.05); } catch (e) {}
 }
 function updateAudio() {
-  if (!ac) return;
-  var m = S.state === 'ok' ? S.motor : 0, t = ac.currentTime, base = 110, span = 300, cut = 500 + m * 1400, ty = S.type;
-  if (ty === 'jet' || ty === 'af1' || ty === 'b2' || ty === 'a10') { base = 240; span = 800; cut = 1300 + m * 2500; }
-  else if (ty === 'warbird') { base = 70; span = 210; }
-  else if (ty === 'heli' || (ty === 'osprey' && S.vtol)) { base = 40; span = 60; cut = 380 + m * 500; }
-  osc.frequency.setTargetAtTime(base + m * span, t, 0.06); osc2.frequency.setTargetAtTime((base + m * span) * 0.5, t, 0.06);
-  filt.frequency.setTargetAtTime(cut, t, 0.1);
-  gain.gain.setTargetAtTime(game.sound && !game.paused && m > 0.02 ? 0.03 + m * 0.07 : 0, t, 0.08);
+  if (!ac || !ENG) return;
+  var m = S.state === 'ok' ? S.motor : 0, ty = S.type;
+  var kind = ty === 'jet' || ty === 'af1' || ty === 'b2' || ty === 'a10' ? 'jet' : ty === 'heli' || (ty === 'osprey' && S.vtol) ? 'rotor' : ty === 'warbird' ? 'big' : ty === 'osprey' ? 'prop' : 'electric';
+  if (ty === 'trainer') kind = 'prop';
+  ENG.set(kind, m, game.sound && !game.paused && m > 0.02);
 }
 
 // ---------------- Weapons & targets (full version only) ----------------
