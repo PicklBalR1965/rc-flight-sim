@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0f3d5c">
-<title>Doylestown RC</title>
+<title>Curiosity Campus Tour</title>
 <style>
   :root { --ui: rgba(12, 28, 44, .62); --line: rgba(255,255,255,.22); --accent: #ffcf3a; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #9cc9ef;
@@ -112,7 +112,7 @@
 </div>
 <div id="topbtns" class="hud">
   <button class="tb" id="bSwap" style="display:none">🔋 Swap battery</button>
-  <button class="tb" id="bRings">⭕ Ring run</button><button class="tb" id="bVtol" style="display:none">⇄ Hover</button>
+  <button class="tb" id="bAuto">Autopilot OFF</button><button class="tb" id="bVtol" style="display:none">⇄ Hover</button>
   <button class="tb" id="bCam">🎥 Chase</button>
   <button class="tb on" id="bGyro">Gyro ON</button>
   <button class="tb" id="bReset">↺ Reset</button>
@@ -132,8 +132,8 @@
 
 <div id="menu">
   <div class="card">
-    <h1>Doylestown <span>RC</span></h1>
-    <div class="sub">Fly RC planes, jets and helicopters over Doylestown, PA — from Doylestown Airport to Lake Galena, Camp Curiosity and the Target Range.</div>
+    <h1>Curiosity <span>Campus Tour</span></h1>
+    <div class="sub">Take off from Doylestown Airport and fly over Camp Curiosity, Curiosity Academy and Doylestown Pickleball.</div>
     <h3>Pick your plane</h3>
     <div class="row" id="planeRow"></div>
     <h3>Launch from</h3>
@@ -141,7 +141,7 @@
     <h3>Settings</h3>
     <div class="toggles">
       <button class="tog on" id="tGyro"><i></i><span>Gyro stabilizer<small>Levels the wings for you — great for learning</small></span></button>
-      <button class="tog on" id="tWeap"><i></i><span>Weapons &amp; targets<small>Turn off for peaceful sightseeing</small></span></button><button class="tog on" id="tRc"><i></i><span>Real RC elevator<small>Pull stick down to climb, push up to dive</small></span></button>
+      <button class="tog" id="tAuto"><i></i><span>Autopilot tour<small>The plane flies the whole tour for you</small></span></button><button class="tog on" id="tRc"><i></i><span>Real RC elevator<small>Pull stick down to climb, push up to dive</small></span></button>
     </div>
     <h3>How to fly</h3>
     <ul class="help" id="helpList"></ul>
@@ -783,7 +783,7 @@ var PHYS = (function () {
 if (typeof module !== 'undefined') module.exports = PHYS;
 
 </script>
-<script>window.GAME_MODE = "full";</script>
+<script>window.GAME_MODE = "tour";</script>
 <script>
 // Doylestown RC — game engine. Mode: window.GAME_MODE = 'full' | 'tour'
 (function () {
