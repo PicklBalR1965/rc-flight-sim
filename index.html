@@ -102,6 +102,28 @@
   #planeRow .opt { flex: 1 1 140px; }
   @media (max-width: 700px) { #card { width: calc(100vw - 40px); bottom: 210px; } .fbtn { right: 20px; } #bFire { bottom: 210px; width: 70px; height: 70px; } #bAlt { bottom: 290px; } }
   @media (max-height: 520px) { .stick { width: 140px; height: 140px; } .stick .knob { width: 54px; height: 54px; margin: -27px 0 0 -27px; } }
+
+  /* ---- phones ---- */
+  @media (max-width: 600px), (max-height: 500px) {
+    #stats { padding: 5px 8px; font-size: 10px; gap: 0 8px; border-radius: 10px; }
+    #stats b { font-size: 11px; }
+    #planeName { font-size: 9px; }
+    #topbtns { gap: 4px; max-width: 55vw; }
+    .tb { padding: 5px 8px; font-size: 11px; border-radius: 9px; }
+    #msg { font-size: 17px; }
+    #ringInfo { font-size: 12px; padding: 4px 10px; top: calc(env(safe-area-inset-top) + 46px); }
+    .card { padding: 14px 14px; } .card h1 { font-size: 22px; } .opt svg { height: 34px; }
+    .stick { width: 112px; height: 112px; border-radius: 24px; bottom: calc(env(safe-area-inset-bottom) + 10px); }
+    #stickL { left: calc(env(safe-area-inset-left) + 12px); } #stickR { right: calc(env(safe-area-inset-right) + 12px); }
+    .stick .knob { width: 42px; height: 42px; margin: -21px 0 0 -21px; }
+    .stick .knob::after { inset: 9px; }
+    .stick label { font-size: 9px; }
+    #thrBar { left: -11px; width: 6px; }
+    #card { bottom: calc(env(safe-area-inset-bottom) + 132px); width: calc(100vw - 30px); padding: 8px 12px; }
+    #card b { font-size: 14px; } #card span { font-size: 12px; }
+    #bFire { width: 60px; height: 60px; font-size: 13px; right: calc(env(safe-area-inset-right) + 134px); bottom: calc(env(safe-area-inset-bottom) + 14px); }
+    #bAlt { padding: 6px 9px; font-size: 11px; right: calc(env(safe-area-inset-right) + 134px); bottom: calc(env(safe-area-inset-bottom) + 82px); }
+  }
 </style>
 </head>
 <body>
@@ -1344,7 +1366,8 @@ function buildAF1() {
 }
 
 var BUILDERS = { trainer: buildTrainer, seaplane: buildSeaplane, warbird: buildWarbird, jet: buildJet, a10: buildA10, b2: buildB2, heli: buildHeli, osprey: buildOsprey, af1: buildAF1 };
-var PLANES = TOUR ? ['trainer'] : ['trainer', 'seaplane', 'warbird', 'jet', 'a10', 'b2', 'heli', 'osprey', 'af1'];
+if (TOUR) { T.heli.name = 'Curiosity Helicopter'; T.heli.sub = 'Hover, spin and fly anywhere over campus'; }
+var PLANES = TOUR ? ['trainer', 'heli'] : ['trainer', 'seaplane', 'warbird', 'jet', 'a10', 'b2', 'heli', 'osprey', 'af1'];
 var models = {};
 scene.traverse(function (o) { if (o.isMesh && !o.material.isShaderMaterial && o !== water) o.receiveShadow = true; });
 PLANES.forEach(function (k) { var m = BUILDERS[k](); GFX.upgrade(m.root); m.root.scale.setScalar(T[k].scale); m.root.visible = false; scene.add(m.root); models[k] = m; });
@@ -1770,7 +1793,7 @@ function buildMenu() {
   });
   var sr = $('startRow'); sr.innerHTML = '';
   STARTS.forEach(function (o) {
-    if (TOUR && (o[0] === 'water' || o[0] === 'helipad' || o[0] === 'hand' || o[0] === 'pcs')) return;
+    if (TOUR && (o[0] === 'water' || o[0] === 'hand' || o[0] === 'pcs' || (o[0] === 'helipad' && !T[game.plane].heli))) return;
     var ok = startOK(o[0]), b = document.createElement('button');
     b.className = 'opt' + (game.start === o[0] ? ' sel' : ''); b.disabled = !ok;
     b.innerHTML = '<div class="t">' + o[1] + '</div><div class="d">' + o[2] + '</div>';
@@ -1791,11 +1814,14 @@ function buildMenu() {
 $('tGyro').onclick = function () { game.gyro = !game.gyro; buildMenu(); syncBtns(); };
 $('tRc').onclick = function () { game.rc = !game.rc; buildMenu(); };
 if ($('tWeap')) $('tWeap').onclick = function () { game.weapons = !game.weapons; buildMenu(); syncBtns(); };
-if ($('tAuto')) $('tAuto').onclick = function () { game.auto = !game.auto; buildMenu(); syncBtns(); };
+if ($('tAuto')) $('tAuto').onclick = function () {
+  if (T[game.plane].heli) { toast('Autopilot is for the plane', 1.5); return; } game.auto = !game.auto; buildMenu(); syncBtns(); };
 $('go').onclick = function () {
+  if (T[game.plane].heli && game.auto) { game.auto = false; }
   initAudio(); spawn(); game.playing = true; game.paused = false; $('menu').classList.add('hidden');
   if (!TOUR && ringRun.on) startRings();
-  if (TOUR) showCard('Curiosity Campus Tour', game.auto ? 'Autopilot engaged — enjoy the flight! Touch a stick to take over.' : 'Throttle up, roll down runway 05 and pull back gently to lift off. Follow the yellow rings.', 6);
+  if (TOUR && T[game.plane].heli) showCard('Curiosity Campus Tour', 'Slide the left stick up to lift off — about halfway hovers. Tilt the right stick to fly, and follow the yellow rings!', 7);
+  else if (TOUR) showCard('Curiosity Campus Tour', game.auto ? 'Autopilot engaged — enjoy the flight! Touch a stick to take over.' : 'Throttle up, roll down runway 05 and pull back gently to lift off. Follow the yellow rings.', 6);
   else toast(T[game.plane].heli ? 'Raise the left stick to lift off!' : 'Throttle up, then pull back gently!', 2.5);
 };
 $('bMenu').onclick = function () { game.paused = true; buildMenu(); $('menu').classList.remove('hidden'); };
@@ -1804,7 +1830,8 @@ $('bCam').onclick = function () { game.cam = (game.cam + 1) % 3; syncBtns(); };
 $('bGyro').onclick = function () { game.gyro = !game.gyro; syncBtns(); toast(game.gyro ? 'Gyro ON — auto-level' : 'Gyro OFF — full aerobatics', 1.6); };
 $('bSound').onclick = function () { game.sound = !game.sound; initAudio(); syncBtns(); };
 if ($('bRings')) $('bRings').onclick = function () { ringRun.on = !ringRun.on; if (ringRun.on) startRings(); else stopRings(); syncBtns(); };
-if ($('bAuto')) $('bAuto').onclick = function () { game.auto = !game.auto; syncBtns(); toast(game.auto ? 'Autopilot ON' : 'Autopilot OFF — you have control', 1.6); };
+if ($('bAuto')) $('bAuto').onclick = function () {
+  if (T[S.type].heli) { toast('Autopilot is for the plane — fly the helicopter yourself!', 2); return; } game.auto = !game.auto; syncBtns(); toast(game.auto ? 'Autopilot ON' : 'Autopilot OFF — you have control', 1.6); };
 $('bVtol').onclick = function () { S.vtol = !S.vtol; toast(S.vtol ? 'Hover mode — rotors up' : 'Plane mode — rotors forward', 1.4); if (!S.vtol && S.onSurface) toast('Plane mode: roll down the runway to take off', 2); syncBtns(); };
 $('bSwap').onclick = function () { S.battery = 1; game.emptyShown = false; beep(880, 0.08); beep(1320, 0.1, 0.1); toast('🔋 Fresh battery!', 1.4); };
 function holdBtn(el, key) {
