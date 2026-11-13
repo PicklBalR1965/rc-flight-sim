@@ -1091,14 +1091,14 @@ var CM = CAMPUSMAP, CAMP = {};
 (function campus() {
   var cx = CAMPUS.x, cz = CAMPUS.z, gy = CAMPUS.h;
   CM.build(scene, { x: cx, z: cz }, function (x, z) { return G(x, z); }, {
-    label: function (t, x, y, z, c) { label(t, x, y + 8, z, c); },
+    label: function (t, x, y, z, c) { if (TOUR) label(t, x, y + 8, z, c); },
     solid: function (x0, x1, z0, z1, top) { boxes.push({ x0: x0, x1: x1, z0: z0, z1: z1, top: top }); },
     poolWaterY: gy + 0.05, pondY: gy + 0.04,
     pondWater: new THREE.MeshPhongMaterial({ color: 0x4f7f5a, transparent: true, opacity: 0.9, shininess: 90 })
   });
   var S0 = CM.SPOTS; function w(s) { return { x: cx + s.x, z: cz + s.z }; }
   CAMP.barn = w(S0.barn); CAMP.courts = w(S0.courts); CAMP.academy = w(S0.academy); CAMP.camp = w(S0.camp); CAMP.farm = w(S0.farm); CAMP.pool = w(S0.pool); CAMP.pond = w(S0.pond);
-  label('Camp Curiosity · 4425 Landisville Rd', cx, gy + 70, cz + 40, '#ffffff');
+  if (TOUR) label('Camp Curiosity · 4425 Landisville Rd', cx, gy + 70, cz + 40, '#ffffff');
 })();
 scene.add(MG.build());
 
