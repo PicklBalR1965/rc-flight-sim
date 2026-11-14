@@ -151,6 +151,13 @@
     body.ground #bFire { right: calc(env(safe-area-inset-right) + 10px); bottom: calc(env(safe-area-inset-bottom) + 118px); width: 56px; height: 56px; }
     body.ground #bAlt { right: calc(env(safe-area-inset-right) + 74px); bottom: calc(env(safe-area-inset-bottom) + 118px); }
   }
+  #mini { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 58px); right: calc(env(safe-area-inset-right) + 10px); width: 170px; height: 170px; border-radius: 16px; border: 2px solid rgba(255,255,255,.3); touch-action: none; cursor: pointer; display: none; }
+  body.playing #mini { display: block; }
+  #bigmap { position: fixed; inset: 0; z-index: 30; background: rgba(8,18,28,.92); display: none; padding: calc(env(safe-area-inset-top) + 10px) 10px calc(env(safe-area-inset-bottom) + 10px); box-sizing: border-box; }
+  #bigmap .wrap { display: flex; gap: 12px; height: 100%; } #bigmap canvas { flex: 1; min-width: 0; height: 100%; object-fit: contain; border-radius: 14px; }
+  #bigmap .side { width: 230px; overflow-y: auto; } #bigmap h3 { margin: 4px 0 8px; } #bigmap .dest { display: block; width: 100%; text-align: left; margin-bottom: 6px; padding: 9px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.07); font-weight: 600; font-size: 13px; }
+  #bigmap .dest:hover { background: rgba(255,207,58,.25); } #bigmap .close { background: #ffcf3a; color: #10202e; border: none; font-weight: 800; }
+  @media (max-width: 600px), (max-height: 500px) { #mini { width: 104px; height: 104px; top: calc(env(safe-area-inset-top) + 44px); } #bigmap .wrap { flex-direction: column; } #bigmap canvas { height: 55%; flex: none; width: 100%; } #bigmap .side { width: 100%; } }
 </style>
 </head>
 <body>
@@ -170,6 +177,8 @@
   <button class="tb" id="bSound">🔊</button>
   <button class="tb" id="bMenu">☰</button>
 </div>
+<canvas id="mini" width="340" height="340" title="Map (M)"></canvas>
+<div id="bigmap"><div class="wrap"><canvas id="bigc" width="1180" height="900"></canvas><div class="side"><h3>🗺️ Go to…</h3><div id="destList"></div><button class="dest close" id="mapClose">✕ Close map (M)</button></div></div></div>
 <div id="ringInfo" class="hud"></div>
 <div id="msg" class="hud"></div>
 <div id="marker" class="hud"></div>
@@ -2295,6 +2304,69 @@ function groundStep(dt) {
   S.motor = hasGears() ? 0.15 + 0.8 * (S.rpm || 0) * (0.6 + 0.4 * drive) : 0.12 + 0.88 * Math.min(1, Math.abs(sp) / Tt.vmax * 0.8 + drive * 0.3);
   S.throttle = drive;
 }
+
+// ---------------- Map: where you are + places you can go ----------------
+var MAPW = { x0: -2550, x1: 3450, z0: -2550, z1: 1900 }, MS = 0.25;
+var DESTS = [
+  { n: '🏛️ Downtown Doylestown', s: 'Downtown', x: 0, z: 30 }, { n: '🛫 Doylestown Airport', x: RWY.x, z: RWY.z, air: true },
+  { n: '🏕️ Camp Curiosity & Doylestown Pickleball', s: 'Camp Curiosity', x: CAMPUS.x, z: CAMPUS.z + 110 }, { n: '🌊 Lake Galena', x: LAKE.x, z: LAKE.z + 140 },
+  { n: '🎯 Target Range', x: RANGE.x, z: RANGE.z + 200 }, { n: '⛪ National Shrine of Our Lady of Czestochowa', s: 'The Shrine', x: SHRINE.x + 60, z: SHRINE.z },
+  { n: '🌉 New Hope', x: NEWHOPE.x, z: NEWHOPE.z }, { n: '🏘️ Lambertville, NJ', s: 'Lambertville', below: true, x: PHYS.riverX(-950) + 200, z: -950 },
+  { n: '🏰 Mercer Museum', s: 'Mercer', below: true, x: LM.mercer.x, z: LM.mercer.z }, { n: '🏯 Fonthill Castle', s: 'Fonthill', x: LM.fonthill.x, z: LM.fonthill.z },
+  { n: '🎓 Delaware Valley University', s: 'DelVal', x: LM.delval.x, z: LM.delval.z }, { n: '🌳 Central Park', x: LM.park.x, z: LM.park.z },
+  { n: '🏥 Doylestown Hospital', x: LM.hospital.x, z: LM.hospital.z }
+].filter(function (d) { return !TOUR || d.n.indexOf('Target') < 0; });
+var MAPC = (function () {
+  var c = document.createElement('canvas'); c.width = Math.ceil((MAPW.x1 - MAPW.x0) * MS); c.height = Math.ceil((MAPW.z1 - MAPW.z0) * MS); var x = c.getContext('2d');
+  function P(px, pz) { return [(px - MAPW.x0) * MS, (pz - MAPW.z0) * MS]; }
+  x.fillStyle = '#6f9a52'; x.fillRect(0, 0, c.width, c.height);
+  var tw = P(0, 0); x.fillStyle = '#8fa883'; x.beginPath(); x.arc(tw[0], tw[1], 450 * MS, 0, 7); x.fill();
+  var lk = P(LAKE.x, LAKE.z); x.fillStyle = '#3a7fa8'; x.beginPath(); x.ellipse(lk[0], lk[1], LAKE.rx * MS * 1.1, LAKE.rz * MS * 1.1, 0, 0, 7); x.fill();
+  x.beginPath(); for (var z = MAPW.z0; z <= MAPW.z1; z += 40) { var q = P(PHYS.riverX(z) - 50, z); x.lineTo(q[0], q[1]); } for (z = MAPW.z1; z >= MAPW.z0; z -= 40) { var q2 = P(PHYS.riverX(z) + 50, z); x.lineTo(q2[0], q2[1]); } x.fill();
+  var cp = P(CAMPUS.x, CAMPUS.z); x.fillStyle = '#9dbb7a'; x.beginPath(); x.arc(cp[0], cp[1], CAMPUS.r * MS, 0, 7); x.fill();
+  ROADS.forEach(function (r) { x.strokeStyle = r.w >= 10 ? '#fff6d6' : '#ffffff'; x.lineWidth = Math.max(1.5, r.w * MS * 0.7); x.beginPath(); r.pts.forEach(function (p, i) { var q = P(p[0], p[1]); if (i) x.lineTo(q[0], q[1]); else x.moveTo(q[0], q[1]); }); x.stroke(); });
+  var a = PHYS.rwyPoint(-RWY.len / 2, 0), b = PHYS.rwyPoint(RWY.len / 2, 0), qa = P(a.x, a.z), qb = P(b.x, b.z); x.strokeStyle = '#3b3e44'; x.lineWidth = 6; x.beginPath(); x.moveTo(qa[0], qa[1]); x.lineTo(qb[0], qb[1]); x.stroke();
+  return { c: c, P: P };
+})();
+var miniCtx = $('mini').getContext('2d'), bigCtx = $('bigc').getContext('2d');
+function playerHeading() { tmpF.set(0, 0, 1).applyQuaternion(S.q); return Math.atan2(tmpF.x, tmpF.z); }
+function drawArrow(ctx, px, py, yaw, s) { ctx.save(); ctx.translate(px, py); ctx.rotate(-yaw + Math.PI); ctx.fillStyle = '#ff3b30'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * 0.65, s * 0.75); ctx.lineTo(0, s * 0.35); ctx.lineTo(-s * 0.65, s * 0.75); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+function drawMini() {
+  var w = miniCtx.canvas.width, h = miniCtx.canvas.height, z = 1.25; miniCtx.save(); miniCtx.fillStyle = '#6f9a52'; miniCtx.fillRect(0, 0, w, h);
+  miniCtx.translate(w / 2, h / 2); miniCtx.scale(z, z); var p = MAPC.P(S.pos.x, S.pos.z); miniCtx.translate(-p[0], -p[1]); miniCtx.drawImage(MAPC.c, 0, 0); miniCtx.restore();
+  drawArrow(miniCtx, w / 2, h / 2, playerHeading(), 13);
+  miniCtx.fillStyle = 'rgba(10,25,40,.7)'; miniCtx.fillRect(0, h - 26, w, 26); miniCtx.fillStyle = '#fff'; miniCtx.font = 'bold 17px Arial'; miniCtx.textAlign = 'center'; miniCtx.fillText('🗺️ Map (M)', w / 2, h - 7);
+}
+function drawBig() {
+  var w = bigCtx.canvas.width, h = bigCtx.canvas.height, sc = Math.min(w / MAPC.c.width, h / MAPC.c.height), ox = (w - MAPC.c.width * sc) / 2, oy = (h - MAPC.c.height * sc) / 2;
+  bigCtx.fillStyle = '#0d1b28'; bigCtx.fillRect(0, 0, w, h); bigCtx.drawImage(MAPC.c, ox, oy, MAPC.c.width * sc, MAPC.c.height * sc);
+  bigCtx.font = 'bold 15px Arial'; bigCtx.textAlign = 'center';
+  DESTS.forEach(function (d) { var q = MAPC.P(d.x, d.z), px = ox + q[0] * sc, py = oy + q[1] * sc; bigCtx.fillStyle = '#ffd94f'; bigCtx.beginPath(); bigCtx.arc(px, py, 6, 0, 7); bigCtx.fill(); bigCtx.fillStyle = 'rgba(10,25,40,.75)'; var t = d.s || d.n.replace(/^\S+\s/, ''), tw = bigCtx.measureText(t).width + 10, oy2 = d.below ? 30 : 0; bigCtx.fillRect(px - tw / 2, py - 28 + oy2, tw, 19); bigCtx.fillStyle = '#fff'; bigCtx.fillText(t, px, py - 13 + oy2); });
+  var me = MAPC.P(S.pos.x, S.pos.z); drawArrow(bigCtx, ox + me[0] * sc, oy + me[1] * sc, playerHeading(), 16);
+  bigCtx.fillStyle = '#fff'; bigCtx.textAlign = 'left'; bigCtx.fillText('▲ N · you are the red arrow · tap a place on the right to go there', 14, h - 14);
+}
+function nearestRoadPoint(x, z) { var best = null; ROADS.forEach(function (r) { for (var i = 0; i < r.pts.length - 1; i++) { var a = r.pts[i], b = r.pts[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz || 1, t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / L2, 0, 1), px = a[0] + dx * t, pz = a[1] + dz * t, d = Math.hypot(x - px, z - pz); if (!best || d < best.d) { var L = Math.sqrt(L2); best = { d: d, x: px, z: pz, yaw: Math.atan2(dx, dz), nx: -dz / L, nz: dx / L }; } } }); return best; }
+function goTo(d) {
+  var Tt = T[S.type]; S.state = 'ok'; game.resetT = 0;
+  if (Tt.ground) {
+    var rp = nearestRoadPoint(d.x, d.z), x = rp.x + rp.nx * 2.2, z = rp.z + rp.nz * 2.2;   // right-hand lane
+    S.gyaw = rp.yaw; S.gspd = 0; S.pos.set(x, G(x, z), z); S.q.copy(yawQ(rp.yaw)); S.onSurface = true;
+  } else {
+    var yaw = playerHeading(); S.pos.set(d.x, G(d.x, d.z) + (Tt.heli ? 30 : 60), d.z); S.q.copy(yawQ(yaw)); tmpF.set(0, 0, 1).applyQuaternion(S.q);
+    S.vel.copy(tmpF).multiplyScalar(Tt.heli || (Tt.tilt && S.vtol) ? 0 : 13); S.onSurface = false; S.motor = Tt.heli ? 0.5 : 0.62; input.thr = S.motor; drawSticks();
+  }
+  tmpF.set(0, 0, 1).applyQuaternion(S.q); camHead.copy(tmpF).setY(0).normalize(); camera.position.copy(S.pos).addScaledVector(camHead, -10).add(new V3(0, 3, 0));
+  toast(d.n.replace(/^\S+\s/, ''), 2); closeMap();
+}
+(function () { var h = ''; DESTS.forEach(function (d, i) { h += '<button class="dest" data-i="' + i + '">' + d.n + '</button>'; }); $('destList').innerHTML = h;
+  Array.prototype.forEach.call(document.querySelectorAll('#destList .dest'), function (b) { b.onclick = function () { goTo(DESTS[+b.dataset.i]); }; }); })();
+var mapWasPaused = false;
+function openMap() { if (!game.playing) return; mapWasPaused = game.paused; game.paused = true; $('bigmap').style.display = 'block'; drawBig(); }
+function closeMap() { $('bigmap').style.display = 'none'; game.paused = mapWasPaused && false; }
+$('mini').addEventListener('pointerdown', function (e) { e.preventDefault(); openMap(); });
+$('mapClose').onclick = closeMap;
+addEventListener('keydown', function (e) { if (e.key.toLowerCase() === 'm' && game.playing) { if ($('bigmap').style.display === 'block') closeMap(); else openMap(); } });
+var miniT = 0;
 // ---------------- Update ----------------
 function expo(x) { return x * Math.abs(x) * 0.55 + x * 0.45; }
 var wobble = 0;
@@ -2481,6 +2553,7 @@ function render(dt) {
   shadow.position.set(S.pos.x, gH + 0.08, S.pos.z); shadow.material.opacity = hgt < 60 ? 0 : clamp(0.32 - hgt * 0.004, 0, 0.25); shadow.scale.setScalar(sc * (0.8 + hgt * 0.01));
   pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true;
   updateCamera(dt); updateMarkers(); updateAudio();
+  miniT -= dt; if (miniT <= 0 && game.playing) { miniT = 0.1; drawMini(); }
   labels.forEach(function (l) { var d = l.position.distanceTo(camera.position); l.visible = d < 1400 && d > 45; var s = clamp(d / 22, 14, 60); l.scale.set(s * l.userData.asp, s, 1); });
   sky.position.copy(camera.position);
   renderer.render(scene, camera);
