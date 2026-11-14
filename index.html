@@ -412,7 +412,7 @@ var CAMPUSMAP = (function () {
     { t: 'Gaga Pit', x: 177, z: 51, h: 10, c: '#ffb36b' },
     { t: 'Drop Off & Pickup', x: 97, z: 62, h: 12, c: '#ffd94f' },
     { t: 'Lunch', x: 13, z: 20, h: 12, c: '#ffd94f' },
-    { t: 'Sand Volleyball', x: 125, z: -64, h: 10 },
+    { t: 'Ball Field · Softball, Kickball & Baseball', x: 125, z: -54, h: 12, c: '#ffb36b' },
     { t: 'Garden', x: -6, z: 88, h: 8, c: '#8ff0a8' },
     { t: 'Fire Circle', x: 62, z: 96, h: 8 },
     { t: 'Shuffleboard & Chess', x: -98, z: 44, h: 8 },
@@ -646,9 +646,17 @@ var CAMPUSMAP = (function () {
     // Gaga pit: low octagon wall on the round pad
     (function () { var GX = 177, GZ = 51, R = 4.6, gy3 = ground(GX, GZ); for (var i = 0; i < 8; i++) { var a = (i + 0.5) / 8 * Math.PI * 2, side = 2 * R * Math.tan(Math.PI / 8); var m = new THREE.Mesh(new THREE.BoxGeometry(side, 0.9, 0.18), lamb(0x8a6440)); m.position.set(o.x + GX + Math.cos(a) * R, gy3 + 0.45, o.z + GZ + Math.sin(a) * R); m.rotation.y = -a + Math.PI / 2; add(m); } cb.solid(o.x + GX - R, o.x + GX + R, o.z + GZ - R, o.z + GZ + R, gy3 + 0.9); })();
 
-    // Sand volleyball net
-    [[-8, 0], [8, 0]].forEach(function (p) { post(125 + p[0], -54 + p[1], 2.6, 0xeeeeee); });
-    bx(16, 0.9, 0.04, new THREE.MeshLambertMaterial({ color: 0x222222, transparent: true, opacity: 0.6 }), 125, -54, 1.6);
+    // Ball field (softball / kickball / baseball): dirt infield diamond, bases, mound and backstop
+    (function () { var BX = 125, BZ = -54, D = 6.5;
+      [[0, D], [D, 0], [0, -D]].forEach(function (b) { var m = bx(0.6, 0.12, 0.6, 0xffffff, BX + b[0], BZ + b[1], 0.05); m.rotation.y = Math.PI / 4; });
+      var hp = bx(0.6, 0.06, 0.6, 0xffffff, BX - D, BZ, 0.05); hp.rotation.y = Math.PI / 4;
+      cyl(1.2, 1.4, 0.25, 0xc9a874, BX, BZ, 0, 16); bx(0.6, 0.06, 0.15, 0xffffff, BX, BZ, 0.25);
+      [[-1, -1], [-1, 1]].forEach(function (k) { var L = 30, a = Math.atan2(k[1], 1); var ln = new THREE.Mesh(new THREE.PlaneGeometry(L, 0.15), lamb(0xffffff)); ln.rotation.order = 'YXZ'; ln.rotation.set(-Math.PI / 2, -a, 0); ln.position.set(o.x + BX - D + Math.cos(a) * L / 2, ground(BX, BZ) + 0.12, o.z + BZ + Math.sin(a) * L / 2); scene.add(ln); });
+      var back = new THREE.MeshLambertMaterial({ color: 0x8c9399, transparent: true, opacity: 0.4 });
+      [[-0.6, 0, 0.06, 6], [0.6, -2.4, 2.5, 0.06], [0.6, 2.4, 2.5, 0.06]].forEach(function (f, i) { var m = new THREE.Mesh(new THREE.BoxGeometry(f[2], 3.5, f[3]), back); m.position.set(o.x + BX - D - 3 + f[0], ground(BX, BZ) + 1.75, o.z + BZ + f[1]); if (i) m.rotation.y = i === 1 ? 0.6 : -0.6; scene.add(m); });
+      cb.solid(o.x + BX - D - 3.7, o.x + BX - D - 3.5, o.z + BZ - 3, o.z + BZ + 3, ground(BX, BZ) + 3.5);
+      [-1, 1].forEach(function (sd) { bx(5, 0.45, 0.5, 0x8b6a4a, BX - D - 2, BZ + sd * 7, 0); });
+    })();
 
     // Drop off & pickup: bus pull-off and a yellow camp bus
     flat(7, 26, lamb(surfColor('gravel')), 104, 62, 0.075);
@@ -1840,7 +1848,7 @@ var TOUR_STOPS = [
   { x: CAMPUS.x - 260, y: g0 + 45, z: CAMPUS.z + 120, title: 'Landisville Road', text: 'Camp Curiosity sits on a 55-acre farm right off Landisville Road. That’s it ahead!' },
   { x: ac0.x - 10, y: g0 + 32, z: ac0.z + 30, title: 'Curiosity Academy', text: 'The preschool and Toddler Center. The Curiosity story goes back to 1965, when Ellen Thomas cared for the neighborhood kids.' },
   { x: po0.x + 10, y: g0 + 30, z: po0.z + 25, title: 'Camp Curiosity', text: 'Summer camp! The lap pool and splash pool, lunch by the camp building, the garden and big open fields — in the summer the staff grows to about 75.' },
-  { x: CAMP.gaga.x + 5, y: g0 + 30, z: CAMP.gaga.z - 30, title: 'Archery, Gaga & the Fields', text: 'Drop off & pickup by the bus, the gaga pit, archery range, soccer goals and sand volleyball — the Merit Program in action.' },
+  { x: CAMP.gaga.x + 5, y: g0 + 30, z: CAMP.gaga.z - 30, title: 'Archery, Gaga & the Fields', text: 'Drop off & pickup by the bus, the gaga pit, archery range, soccer goals and the softball, kickball & baseball field — the Merit Program in action.' },
   { x: CAMP.range.x, y: g0 + 30, z: CAMP.range.z + 10, title: 'Golf Driving Range', text: 'Hitting mats under the shade line and yardage flags out past courts 13–16 — putting, chipping and driving merits.' },
   { x: pd0.x, y: g0 + 30, z: pd0.z + 30, title: 'The Pond', text: 'The camp pond with its dock, and Pine Run creek winding through the woods just beyond it.' },
   { x: fr0.x + 10, y: g0 + 32, z: fr0.z + 30, title: 'The Farm', text: 'Paddocks and farm sheds — Camp Curiosity is a camp, a school and a farm.' },
@@ -1949,7 +1957,7 @@ function buildMenu() {
   else if (t.ch === 3) help = '<li><b>Left stick ↕</b> throttle (stays put like a real transmitter)</li><li><b>Right stick ↔</b> turn (differential motors) · <b>↕</b> elevator</li>';
   else help = '<li><b>Left stick ↕</b> throttle (stays put) · <b>↔</b> rudder / steer on the ground</li><li><b>Right stick ↔</b> ailerons (roll) · <b>↕</b> elevator</li>';
   if (t.tilt) help += '<li>Tap <b>VTOL ⇄ Plane</b> to tilt the rotors. Hover mode works like the helicopter.</li>';
-  if (!TOUR && game.weapons && W && (W.gun || W.alt)) help += '<li>Hold <b>FIRE</b> for guns' + (W.alt ? ', and <b>' + ALT_LABEL[W.alt.kind] + '</b> for the special weapon' : '') + '. Targets are at the Target Range, on Lake Galena and in the sky.</li>';
+  if (!TOUR && game.weapons && W && (W.gun || W.alt)) help += '<li>Hold <b>FIRE</b> (keyboard <b>F</b>) for guns' + (W.alt ? ', and <b>' + ALT_LABEL[W.alt.kind] + '</b> (keyboard <b>R</b>) for rockets, bombs or missiles' : '') + '. Targets are at the Target Range, on Lake Galena and in the sky.</li>';
   if (TOUR) help = '<li><b>Autopilot</b> flies the whole tour for you — just sit back and watch. Grab the sticks any time to take over.</li>' + help + '<li>Fly through each yellow ring to hear about that part of campus.</li>';
   $('helpList').innerHTML = help;
   $('tGyro').classList.toggle('on', game.gyro); $('tRc').classList.toggle('on', game.rc);
@@ -2029,11 +2037,11 @@ function drawSticks() {
 }
 addEventListener('keydown', function (e) {
   var k = e.key.toLowerCase(); input.keys[k] = true;
-  if (k === ' ') input.fire = true; if (k === 'b') input.alt = true;
+  if (k === ' ' || k === 'f') input.fire = true; if (k === 'b' || k === 'r') input.alt = true;
   if (['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].indexOf(k) >= 0) takeover();
   if (e.key.indexOf('Arrow') === 0 || e.key === ' ') e.preventDefault();
 });
-addEventListener('keyup', function (e) { var k = e.key.toLowerCase(); input.keys[k] = false; if (k === ' ') input.fire = false; if (k === 'b') input.alt = false; });
+addEventListener('keyup', function (e) { var k = e.key.toLowerCase(); input.keys[k] = false; if (k === ' ' || k === 'f') input.fire = false; if (k === 'b' || k === 'r') input.alt = false; });
 document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
 
 // ---------------- Update ----------------
