@@ -169,6 +169,7 @@
   <span class="k">Battery</span><b id="sBat">100%</b>
 </div>
 <div id="topbtns" class="hud">
+  <button class="tb hot" id="bShut" style="display:none">🚀 LAUNCH</button>
   <button class="tb" id="bSwap" style="display:none">🔋 Swap battery</button>
   <button class="tb" id="bAuto">Autopilot OFF</button><button class="tb" id="bVtol" style="display:none">⇄ Hover</button>
   <button class="tb" id="bCam">🎥 Chase</button>
@@ -991,9 +992,9 @@ var hemi = new THREE.HemisphereLight(0xe2f0ff, 0x5a7a3c, 0.9); scene.add(hemi);
 var sun = new THREE.DirectionalLight(0xfff2dc, 0.8); sun.position.set(300, 500, 200); scene.add(sun);
 GFX.setup(renderer, scene, sun, hemi);
 var sky = new THREE.Mesh(new THREE.SphereGeometry(5000, 32, 16), new THREE.ShaderMaterial({
-  side: THREE.BackSide, depthWrite: false,
+  side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { uSpace: { value: 0 } },
   vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-  fragmentShader: 'varying vec3 vP; void main(){ float h = vP.y; gl_FragColor = vec4(mix(vec3(.77,.87,.96), vec3(.2,.46,.86), smoothstep(0.0,.45,max(h,0.0))),1.0); }'
+  fragmentShader: 'uniform float uSpace; varying vec3 vP; void main(){ float h = vP.y; vec3 c = mix(vec3(.77,.87,.96), vec3(.2,.46,.86), smoothstep(0.0,.45,max(h,0.0))); c = mix(c, mix(vec3(.02,.03,.08), vec3(.08,.2,.45), smoothstep(-0.25, 0.05, -h) * 0.6), uSpace); gl_FragColor = vec4(c,1.0); }'
 }));
 scene.add(sky);
 
@@ -1657,7 +1658,172 @@ function buildMoto() {   // 1 unit = 1.1 m — sport bike with rider
   return { root: root, A: A };
 }
 BUILDERS.tank = buildTank; BUILDERS.car = function () { return buildCar(); }; BUILDERS.moto = buildMoto;
-var PLANES = TOUR ? ['trainer', 'heli'] : ['trainer', 'seaplane', 'warbird', 'jet', 'a10', 'b2', 'heli', 'osprey', 'af1', 'tank', 'car', 'moto'];
+
+// ---------------- 🚀 Space Shuttle ----------------
+T.shuttle = { name: 'Space Shuttle', sub: 'Launch to space, orbit Earth, glide home', ch: 2, scale: 1, bottom: 0, shuttle: true };
+var PAD = { x: 1300, z: -900 };
+function buildShuttle() {
+  var root = new THREE.Group(), A = { props: [], fpv: new V3(0, 3.2, 12) };
+  var wh = lam(0xf2f2ee), blk = lam(0x1c1d21), gry = lam(0x9a9ea4), org = lam(0xd2691e);
+  var orb = new THREE.Group(); root.add(orb);
+  // orbiter (nose +z), sits above the tank: belly faces -y
+  var fus = tube(2.6, 2.6, 26, wh, 0, 3.4, 0); orb.add(fus);
+  var nose = new THREE.Mesh(new THREE.ConeGeometry(2.6, 6, 18).rotateX(Math.PI / 2), wh); nose.position.set(0, 3.4, 16); orb.add(nose);
+  orb.add(box(5, 1.2, 26, blk, 0, 1.2, 0));                                              // black belly tiles
+  orb.add(mesh(new THREE.ConeGeometry(2.62, 2.2, 18).rotateX(Math.PI / 2), blk, 0, 2.2, 17.5).translateY(0));
+  var wing = panel([[-12, -12], [12, -12], [2.5, 10], [-2.5, 10]], 0.5, wh); wing.position.set(0, 1.6, -3); orb.add(wing);
+  var wingB = panel([[-12.1, -12.1], [12.1, -12.1], [2.5, 10.2], [-2.5, 10.2]], 0.3, blk); wingB.position.set(0, 1.3, -3); orb.add(wingB);
+  var fin2 = fin([[-13, 4], [-6, 4], [-11, 15], [-14, 15]], 0.6, wh); fin2.position.set(0, 2, 0); orb.add(fin2);
+  [-1.6, 1.6].forEach(function (x) { orb.add(tube(1.1, 1.1, 5, wh, x * 1.4, 5.6, -11)); });           // OMS pods
+  var nz = [[0, 5.0, -14], [-1.6, 2.6, -14], [1.6, 2.6, -14]].map(function (p) { var m = tube(0.8, 1.3, 2.4, gry, p[0], p[1], p[2]); orb.add(m); return m; });
+  var wnd = box(3, 0.6, 1.2, M.glass, 0, 5.5, 13); wnd.rotation.x = 0.35; orb.add(wnd);
+  var nasa = canvasTex(256, 64, function (c) { c.fillStyle = '#f2f2ee'; c.fillRect(0, 0, 256, 64); c.fillStyle = '#1f3f7a'; c.font = 'bold 40px Arial'; c.textAlign = 'center'; c.fillText('CURIOSITY', 128, 46); });
+  [-1, 1].forEach(function (s) { var p = new THREE.Mesh(new THREE.PlaneGeometry(9, 2.2), new THREE.MeshLambertMaterial({ map: nasa })); p.position.set(s * 2.63, 4.2, 2); p.rotation.y = s * Math.PI / 2; orb.add(p); });
+  // payload bay doors (open in orbit)
+  A.doors = [-1, 1].map(function (s) { var hg = new THREE.Group(); hg.position.set(s * 2.4, 5.9, -1); var d = box(2.4, 0.15, 17, wh, -s * 1.2, 0, 0); hg.add(d); orb.add(hg); return hg; });
+  // gear (down for landing)
+  A.gear = new THREE.Group(); [[0, 9], [-3, -6], [3, -6]].forEach(function (p) { A.gear.add(box(0.3, 2.2, 0.3, gry, p[0], -0.1, p[1]), wheel(0.6, p[0], -1.2, p[1])); }); A.gear.children.forEach(function (c) { if (c.geometry && c.geometry.type === 'CylinderGeometry') c.scale.set(1, 6, 1); }); orb.add(A.gear); A.gear.visible = false;
+  // external tank + solid rocket boosters (the tank is under the belly: -y)
+  var et = new THREE.Group(); et.add(tube(4.2, 4.2, 40, org, 0, -5.5, -3)); var etn = new THREE.Mesh(new THREE.ConeGeometry(4.2, 9, 20).rotateX(Math.PI / 2), org); etn.position.set(0, -5.5, 21.5); et.add(etn); root.add(et);
+  var srbs = [-1, 1].map(function (s) { var g = new THREE.Group(); g.add(tube(1.9, 1.9, 40, wh, s * 6.3, -5.5, -5)); var c = new THREE.Mesh(new THREE.ConeGeometry(1.9, 5, 16).rotateX(Math.PI / 2), wh); c.position.set(s * 6.3, -5.5, 17.5); g.add(c);
+    g.add(tube(1.9, 2.6, 3, blk, s * 6.3, -5.5, -26.4)); root.add(g); return g; });
+  [et].concat(srbs).forEach(function (o) { o.userData.home = { p: o.position.clone(), q: o.quaternion.clone() }; });
+  A.et = et; A.srbs = srbs; A.nozzles = nz;
+  // flames
+  var flameM = new THREE.MeshBasicMaterial({ color: 0xffd28a, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
+  A.flames = [];
+  nz.forEach(function (n) { var f = new THREE.Mesh(new THREE.ConeGeometry(1.1, 10, 12, 1, true).rotateX(-Math.PI / 2), flameM); f.position.copy(n.position).add(new V3(0, 0, -6.2)); orb.add(f); A.flames.push(f); });
+  srbs.forEach(function (g2, i) { var f = new THREE.Mesh(new THREE.ConeGeometry(2.4, 22, 12, 1, true).rotateX(-Math.PI / 2), flameM); f.position.set((i ? 1 : -1) * 6.3, -5.5, -39); g2.add(f); A.flames.push(f); });
+  A.heat = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 12), new THREE.MeshBasicMaterial({ color: 0xff6a20, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); A.heat.position.set(0, 1, 12); A.heat.scale.set(1, 0.7, 1.6); orb.add(A.heat);
+  return { root: root, A: A };
+}
+BUILDERS.shuttle = buildShuttle;
+// launch pad
+(function pad() {
+  var gy = G(PAD.x, PAD.z);
+  put(UBOX, PAD.x, gy + 1.5, PAD.z, 70, 3, 70, '#bdb8ad'); put(UBOX, PAD.x, gy + 3.05, PAD.z + 22, 14, 0.2, 18, '#4a4a4a');
+  put(UBOX, PAD.x + 22, gy + 40, PAD.z, 9, 74, 9, '#9c3b2a'); put(UBOX, PAD.x + 22, gy + 78, PAD.z, 3, 6, 3, '#d8d8d8');
+  for (var i = 0; i < 6; i++) put(UBOX, PAD.x + 15, gy + 18 + i * 10, PAD.z, 6, 1, 2, '#9c3b2a');
+  put(UBOX, PAD.x - 26, gy + 45, PAD.z - 20, 1.2, 90, 1.2, '#d8d8d8');
+  solid(PAD.x + 22, PAD.z, 9, 9, gy + 80);
+  ROADS.push({ w: 9, pts: [[PAD.x - 35, PAD.z], [PAD.x - 300, PAD.z + 150], [1100, -60]] });
+  label('🚀 Launch Pad', PAD.x, gy + 110, PAD.z, '#ffd94f');
+})();
+// space scenery: stars + Earth seen from orbit
+var STARS = (function () { var n = 1500, p = new Float32Array(n * 3); for (var i = 0; i < n; i++) { var u = -0.62 + rnd() * 1.62, a = rnd() * 6.283, r = Math.sqrt(1 - u * u); p[i * 3] = Math.cos(a) * r * 4500; p[i * 3 + 1] = u * 4500; p[i * 3 + 2] = Math.sin(a) * r * 4500; }
+  var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3)); var m = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false })); m.frustumCulled = false; m.renderOrder = -1; scene.add(m); return m; })();
+var EARTH_R = 150000, EARTH = (function () {
+  var t = canvasTex(1024, 512, function (c, w, h) { c.fillStyle = '#1d4f8a'; c.fillRect(0, 0, w, h);
+    for (var i = 0; i < 42; i++) { c.fillStyle = ['#3f7a3a', '#5b8a3c', '#7d8a4a', '#4c7a40'][i % 4]; c.beginPath(); var x = rnd() * w, y = h * 0.15 + rnd() * h * 0.7; for (var k = 0; k < 9; k++) { var a = k / 9 * 6.283, r = 20 + rnd() * 60; c.lineTo(x + Math.cos(a) * r * 1.6, y + Math.sin(a) * r); } c.fill(); }
+    c.fillStyle = '#eef3f7'; c.fillRect(0, 0, w, h * 0.06); c.fillRect(0, h * 0.94, w, h * 0.06);
+    for (var j = 0; j < 420; j++) { c.fillStyle = 'rgba(255,255,255,' + (0.12 + rnd() * 0.3) + ')'; c.beginPath(); c.ellipse(rnd() * w, rnd() * h, 4 + rnd() * 20, 2 + rnd() * 6, rnd(), 0, 7); c.fill(); } });
+  var e = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R, 96, 64), new THREE.MeshLambertMaterial({ map: t, fog: false })); e.position.set(PAD.x, -EARTH_R - 60, PAD.z); e.visible = false; scene.add(e);
+  var atm = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R * 1.015, 64, 48), new THREE.MeshBasicMaterial({ color: 0x6fb2ff, transparent: true, opacity: 0.18, side: THREE.BackSide, fog: false, depthWrite: false })); e.add(atm);
+  return e; })();
+var SH = { phase: 'pad', t: 0, yaw: 0, debris: [], count: 0 };
+function shuttleReset() {
+  var A = models.shuttle.A; SH.phase = 'pad'; SH.t = 0; SH.count = 0; SH.yaw = Math.PI / 2; SH.p0 = null;
+  [A.et].concat(A.srbs).forEach(function (o) { if (o.parent !== models.shuttle.root) { scene.remove(o); models.shuttle.root.add(o); } o.position.copy(o.userData.home.p); o.quaternion.copy(o.userData.home.q); o.visible = true; });
+  SH.debris.forEach(function (d) { if (d.o.parent === scene && d.o !== A.et && A.srbs.indexOf(d.o) < 0) scene.remove(d.o); }); SH.debris = [];
+  A.gear.visible = false; A.doors.forEach(function (d, i) { d.rotation.z = 0; }); A.flames.forEach(function (f) { f.visible = false; }); A.heat.material.opacity = 0; SH.doneMsg = false;
+  var gy = G(PAD.x, PAD.z) + 3.1 + 40;   // stack stands on its tail
+  S.pos.set(PAD.x, gy, PAD.z); S.vel.set(0, 0, 0); S.q.copy(yawQ(SH.yaw)).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), -Math.PI / 2));
+  S.onSurface = true; S.state = 'ok'; S.motor = 0; input.thr = 0; setSpace(0); $('bShut').style.display = ''; $('bShut').textContent = '🚀 LAUNCH';
+}
+function detach(o, push) { var A = models.shuttle.A, wp = new V3(), wq = new THREE.Quaternion(); o.getWorldPosition(wp); o.getWorldQuaternion(wq); o.parent.remove(o); o.position.copy(wp); o.quaternion.copy(wq); scene.add(o);
+  SH.debris.push({ o: o, v: S.vel.clone().multiplyScalar(0.8).add(push), spin: new V3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(0.6), t: 0 }); }
+var spaceK = 0;
+function setSpace(k) {
+  spaceK = k; sky.material.uniforms.uSpace.value = k; STARS.material.opacity = clamp((k - 0.4) * 1.7, 0, 1);
+  scene.fog.near = 350 + k * 1e6; scene.fog.far = 2200 + k * 2e6; EARTH.visible = k > 0.05;
+  var far = k > 0.05 ? 400000 : 6000; if (camera.far !== far) { camera.far = far; camera.near = k > 0.05 ? 1 : 0.1; camera.updateProjectionMatrix(); }
+  hemi.intensity = 0.75 - k * 0.35;
+}
+function shuttleLaunchPressed() {
+  if (S.type !== 'shuttle' || !game.playing) return;
+  if (SH.phase === 'pad' && SH.count === 0) { SH.count = 3.99; toast('T-minus 3…', 1); }
+  else if (SH.phase === 'orbit') { SH.phase = 'reentry'; SH.t = 0; models.shuttle.A.doors.forEach(function (d) { d.userData.close = true; }); toast('🌎 Deorbit burn — heading home!', 2.5); $('bShut').style.display = 'none'; }
+}
+var _sq = new THREE.Quaternion(), _sv = new V3(), _up = new V3(0, 1, 0);
+function shuttleStep(dt) {
+  var A = models.shuttle.A, k = input.keys, ex = ((k.arrowright ? 1 : 0) - (k.arrowleft ? 1 : 0)) || clamp(input.rx * 1.3, -1, 1), ey = ((k.arrowup ? 1 : 0) - (k.arrowdown ? 1 : 0)) || clamp(-input.ry * 1.3, -1, 1);
+  var alt = S.pos.y - G(clamp(S.pos.x, -2400, 3300), clamp(S.pos.z, -2400, 1800)); SH.t += dt; S.battery = 1;
+  if (SH.phase === 'pad') {
+    if (ey > 0 && SH.count === 0) shuttleLaunchPressed();
+    if (SH.count > 0) { var c0 = Math.ceil(SH.count); SH.count -= dt; var c1 = Math.ceil(SH.count); if (c1 !== c0 && c1 > 0) toast('T-minus ' + c1 + '…', 1); if (SH.count <= 0) { SH.phase = 'ascent'; SH.t = 0; SH.v = 0; toast('🚀 LIFTOFF!', 2); feed('We have liftoff!'); $('bShut').style.display = 'none'; } }
+    A.flames.forEach(function (f) { f.visible = SH.count > 0 && SH.count < 1.5; });
+    S.motor = SH.count > 0 ? 0.6 : 0; return;
+  }
+  if (SH.phase === 'ascent') {
+    SH.v = Math.min(1500, SH.v + (SH.t < 3 ? 12 : 30) * dt);
+    SH.yaw -= ex * 0.25 * dt;
+    var tilt = clamp(alt / 30000, 0, 1) * 0.55 + 0.03;                                        // roll program: tip over toward the east as we climb
+    _sv.set(Math.sin(tilt) * Math.sin(SH.yaw), Math.cos(tilt), Math.sin(tilt) * Math.cos(SH.yaw)).normalize();
+    S.vel.copy(_sv).multiplyScalar(SH.v); S.pos.addScaledVector(S.vel, dt);
+    S.q.setFromUnitVectors(new V3(0, 0, 1), _sv); S.onSurface = false; S.motor = 1;
+    A.flames.forEach(function (f) { f.visible = true; f.scale.set(1, 0.85 + rnd() * 0.3, 1); });
+    for (var i = 0; i < 6; i++) { tmpV.set((rnd() - 0.5) * 14, -5.5 + (rnd() - 0.5) * 4, -30).applyQuaternion(S.q).add(S.pos); emit(tmpV.x, tmpV.y, tmpV.z, -S.vel.x * 0.15 + (rnd() - 0.5) * 8, -S.vel.y * 0.15 + (rnd() - 0.5) * 8, -S.vel.z * 0.15 + (rnd() - 0.5) * 8, 2.5 + rnd() * 2, 0.92, 0.9, 0.86, -0.02); }
+    if (A.srbs[0].parent === models.shuttle.root && alt > 4500) { A.srbs.forEach(function (o, j) { tmpV.set(j ? 8 : -8, -4, 0).applyQuaternion(S.q); detach(o, tmpV); }); toast('Booster separation!', 2); feed('SRBs away'); }
+    if (A.et.parent === models.shuttle.root && alt > 40000) { tmpV.set(0, -6, 0).applyQuaternion(S.q); detach(A.et, tmpV); toast('External tank separation!', 2); feed('Tank away'); }
+    setSpace(clamp((alt - 8000) / 40000, 0, 1));
+    if (alt > 80000) { SH.phase = 'orbit'; SH.t = 0; S.vel.set(0, 0, 0); S.q.copy(yawQ(SH.yaw)); camHead.set(Math.sin(SH.yaw), 0, Math.cos(SH.yaw)); toast('🌍 You are in orbit!\nPayload bay doors opening…', 3.5); feed('Orbit achieved'); A.flames.forEach(function (f) { f.visible = false; }); $('bShut').style.display = ''; $('bShut').textContent = '🌎 Return to Earth'; A.doors.forEach(function (d) { d.userData.close = false; }); }
+    return;
+  }
+  if (SH.phase === 'orbit') {
+    S.motor = 0.05; setSpace(1);
+    _sq.setFromAxisAngle(_up, -ex * 0.6 * dt); S.q.premultiply(_sq);
+    tmpL.set(1, 0, 0).applyQuaternion(S.q); _sq.setFromAxisAngle(tmpL, -ey * 0.5 * dt); S.q.premultiply(_sq);
+    EARTH.rotation.z += dt * 0.004; EARTH.rotation.x += dt * 0.002;
+    A.doors.forEach(function (d, i) { var tgt = d.userData.close ? 0 : (i ? -1 : 1) * 2.4; d.rotation.z += (tgt - d.rotation.z) * Math.min(1, dt * 0.8); });
+    if (SH.t > 6 && SH.t < 6.1) toast('Use the arrows to look around.\nPress “Return to Earth” (Enter) when ready.', 4);
+    return;
+  }
+  if (SH.phase === 'reentry') {
+    A.doors.forEach(function (d) { d.rotation.z *= 1 - Math.min(1, dt * 2); });
+    if (!SH.p0) { var ap = PHYS.rwyPoint(-RWY.len / 2 - 5200, 0); SH.p0 = new V3(ap.x, 60000, ap.z); S.pos.copy(SH.p0); SH.t = 0; }
+    var f = clamp(SH.t / 26, 0, 1), endP = PHYS.rwyPoint(-RWY.len / 2 - 2050, 0);
+    S.pos.set(SH.p0.x + (endP.x - SH.p0.x) * f, 60000 * Math.pow(1 - f, 1.6) + (RWY.h + 640) * f, SH.p0.z + (endP.z - SH.p0.z) * f);
+    S.q.copy(yawQ(RWY.yaw)).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), -0.6 * (1 - f) + 0.05));
+    A.heat.material.opacity = Math.max(0, Math.sin(f * Math.PI)) * 0.6;
+    for (var q = 0; q < 5; q++) { tmpV.set((rnd() - 0.5) * 10, -1, 12 + rnd() * 6).applyQuaternion(S.q).add(S.pos); emit(tmpV.x, tmpV.y, tmpV.z, (rnd() - .5) * 20, 40 + rnd() * 30, (rnd() - .5) * 20, 0.6, 1, 0.45 + rnd() * 0.3, 0.1, 0); }
+    setSpace(clamp((S.pos.y - 8000) / 40000, 0, 1)); S.motor = 0.3;
+    if (f >= 1) { SH.phase = 'glide'; SH.v = 48; A.heat.material.opacity = 0; toast('Glide to Doylestown Airport — line up with the runway!\n↑/↓ nose · ←/→ turn', 4); }
+    return;
+  }
+  if (SH.phase === 'glide' || SH.phase === 'landed') {
+    setSpace(0); A.gear.visible = alt < 200;
+    tmpF.set(0, 0, 1).applyQuaternion(S.q); tmpL.set(-1, 0, 0).applyQuaternion(S.q);
+    var pch = Math.asin(clamp(tmpF.y, -1, 1)), bank = Math.asin(clamp(-tmpL.y, -1, 1));
+    if (SH.phase === 'glide') {
+      var pT = -0.33 + ey * 0.15; if (alt < 45) pT = -0.1 + ey * 0.05; if (alt < 8) pT = -0.035 + ey * 0.02;    // steep glide (like the real one), shallow final, flare
+      var aim = PHYS.rwyPoint(-RWY.len / 2 + 60, 0), err = wrapA(Math.atan2(aim.x - S.pos.x, aim.z - S.pos.z) - Math.atan2(tmpF.x, tmpF.z));
+      var bT = ex ? ex * 0.55 : (game.easy && PHYS.rwyLocal(S.pos.x, S.pos.z).u < -RWY.len / 2 + 40 ? clamp(-err * 1.6, -0.4, 0.4) : 0), np = pch + clamp(pT - pch, -0.5 * dt, 0.5 * dt), nb = bank + clamp(bT - bank, -0.9 * dt, 0.9 * dt);
+      SH.yaw = Math.atan2(tmpF.x, tmpF.z) - Math.sin(nb) * 0.55 * dt;
+      SH.v = clamp(SH.v + (-np * 9.8 * 0.9 - 0.12 * (SH.v - 42)) * dt, 30, 95);
+      _sv.set(Math.sin(SH.yaw) * Math.cos(np), Math.sin(np), Math.cos(SH.yaw) * Math.cos(np));
+      S.vel.copy(_sv).multiplyScalar(SH.v); S.pos.addScaledVector(S.vel, dt);
+      S.q.copy(yawQ(SH.yaw)).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), -np)).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(0, 0, 1), -nb));
+      var gnd = G(S.pos.x, S.pos.z) + 1.9;
+      if (S.pos.y <= gnd) {
+        S.pos.y = gnd; var hard = S.vel.y < -7 || !A.gear.visible;
+        if (hard) { game.resetT = 3; S.state = 'crash'; burst(S.pos, 60, 6, [0.6, 0.5, 0.4]); toast('💥 Too hard! Glide in shallower.', 2.5); return; }
+        SH.phase = 'landed'; SH.t = 0; var rl = PHYS.rwyLocal(S.pos.x, S.pos.z), onR = Math.abs(rl.u) < RWY.len / 2 && Math.abs(rl.v) < RWY.wid;
+        toast(onR ? '🎉 Wheels stop! Welcome home to Doylestown Airport!' : '🌾 Landed safely — off the runway, but home!', 4); feed('Mission complete');
+        if (!SH.chute) { SH.chute = new THREE.Mesh(new THREE.SphereGeometry(5, 14, 8, 0, 6.28, 0, 1.4), new THREE.MeshLambertMaterial({ color: 0xff7a1a, side: THREE.DoubleSide })); SH.chute.rotation.x = -Math.PI / 2; }
+        models.shuttle.root.add(SH.chute); SH.chute.position.set(0, 4, -26);
+      }
+    } else {
+      SH.v = Math.max(0, SH.v - 7 * dt); _sv.set(Math.sin(SH.yaw), 0, Math.cos(SH.yaw)); S.vel.copy(_sv).multiplyScalar(SH.v); S.pos.addScaledVector(S.vel, dt); S.pos.y = G(S.pos.x, S.pos.z) + 1.9;
+      S.q.copy(yawQ(SH.yaw)); if (SH.v === 0 && SH.t > 2 && SH.chute && SH.chute.parent) SH.chute.parent.remove(SH.chute);
+      if (SH.v === 0 && SH.t > 6 && !SH.doneMsg) { SH.doneMsg = true; toast('Press ↺ Reset to fly another mission!', 4); }
+    }
+    S.onSurface = SH.phase === 'landed'; S.motor = 0.05;
+  }
+}
+function shuttleUpdateDebris(dt) {
+  SH.debris.forEach(function (d) { d.t += dt; d.v.y -= 9.8 * dt * 2; d.o.position.addScaledVector(d.v, dt); d.o.rotation.x += d.spin.x * dt; d.o.rotation.y += d.spin.y * dt; d.o.rotation.z += d.spin.z * dt; if (d.t > 30) d.o.visible = false; });
+}
+var PLANES = TOUR ? ['trainer', 'heli', 'shuttle'] : ['trainer', 'seaplane', 'warbird', 'jet', 'a10', 'b2', 'heli', 'osprey', 'af1', 'shuttle', 'tank', 'car', 'moto'];
 var models = {};
 if (TOUR) BUILDERS.heli = buildCivHeli;
 scene.traverse(function (o) { if (o.isMesh && !o.material.isShaderMaterial && o !== water) o.receiveShadow = true; });
@@ -1696,7 +1862,8 @@ function spawn() {
   S.type = game.plane; S.vel.set(0, 0, 0); S.state = 'ok'; S.motor = 0; S.steer = S.elev = S.rud = 0; S.onSurface = true; S.battery = 1;
   S.vtol = !!T0.tilt && st === 'helipad';
   var p;
-  if (T0.ground) {
+  if (T0.shuttle) { Object.keys(models).forEach(function (k) { models[k].root.visible = k === game.plane; }); shuttleReset(); }
+  else if (T0.ground) {
     if (['town', 'range', 'shrine', 'newhope'].indexOf(st) < 0) st = 'runway';
     var gx, gz, gyw;
     if (st === 'town') { gx = 3; gz = 140; gyw = Math.PI; }
@@ -1716,9 +1883,10 @@ function spawn() {
     if (st === 'hand') { S.onSurface = false; S.pos.y = RWY.h + 2.5; tmpF.set(0, 0, 1).applyQuaternion(S.q); S.vel.copy(tmpF).multiplyScalar(game.plane === 'af1' || game.plane === 'b2' ? 15 : 11); S.motor = 0.8; }
   }
   input.thr = st === 'hand' ? 0.8 : st === 'air' || st === 'pcs' ? (T0.heli ? 0.5 : 0.62) : 0;
-  tmpF.set(0, 0, 1).applyQuaternion(S.q); camHead.copy(tmpF).setY(0).normalize();
+  tmpF.set(0, 0, 1).applyQuaternion(S.q); camHead.copy(tmpF).setY(0).normalize(); if (T0.shuttle) camHead.set(0, 0, 1);
   camera.position.copy(S.pos).addScaledVector(camHead, -6 * T0.scale / 2).add(new V3(0, 2, 0));
   Object.keys(models).forEach(function (k) { models[k].root.visible = k === game.plane; });
+  if (!T0.shuttle) { $('bShut').style.display = 'none'; setSpace(0); }
   document.body.classList.toggle('ground', !!T0.ground); $('drvUI').style.display = T0.ground ? '' : 'none'; $('gbox').style.display = T0.ground && game.real && (game.plane === 'car' || game.plane === 'moto') ? '' : 'none';
   $('planeName').textContent = T0.name.toUpperCase();
   game.emptyShown = false; game.airT = 0; game.hAlt = undefined; game.hI = undefined;
@@ -1763,6 +1931,7 @@ function updateAudio() {
   var kind = ty === 'jet' || ty === 'af1' || ty === 'b2' || ty === 'a10' ? 'jet' : ty === 'heli' || (ty === 'osprey' && S.vtol) ? 'rotor' : ty === 'warbird' ? 'big' : ty === 'osprey' ? 'prop' : 'electric';
   if (ty === 'trainer') kind = 'prop';
   if (T[ty] && T[ty].ground) kind = T[ty].snd;
+  if (ty === 'shuttle') kind = 'jet';
   ENG.set(kind, m, game.sound && !game.paused && m > 0.02);
 }
 
@@ -1875,7 +2044,7 @@ function aimDir(out, down) { out.set(0, 0, 1).applyQuaternion(S.q); if (down) { 
 function hardpoint(out, pt) { return out.set(pt[0], pt[1], pt[2]).multiplyScalar(T[S.type].scale).applyQuaternion(S.q).add(S.pos); }
 var gunT = 0, altT = 0, gunIdx = 0, altIdx = 0, _d = new V3(), _hp = new V3();
 function fireWeapons(dt) {
-  var W = WEAP[S.type]; if (!W || S.state !== 'ok' || !game.weapons) return;
+  var W = WEAP[S.type]; if (S.type === 'shuttle') return; if (!W || S.state !== 'ok' || !game.weapons) return;
   gunT -= dt; altT -= dt;
   if (W.gun && input.fire && gunT <= 0) {
     gunT = W.gun.rate; var g = W.gun, pt = g.pts[gunIdx++ % g.pts.length];
@@ -2097,13 +2266,14 @@ var SIL = {
   b2: '<svg viewBox="0 0 120 50"><path d="M60 10l52 26-6 3-16-7-8 6-10-5-12 5-12-5-10 5-8-6-16 7-6-3z" fill="#3d4249"/></svg>',
   heli: '<svg viewBox="0 0 120 50"><rect x="14" y="10" width="92" height="3" fill="#222"/><rect x="58" y="12" width="3" height="8" fill="#333"/><path d="M40 20h40c8 0 12 6 10 10H44c-6 0-8-6-4-10z" fill="#4a5236"/><rect x="8" y="22" width="36" height="5" fill="#4a5236"/><path d="M6 14l4 0 4 10H8z" fill="#4a5236"/><rect x="44" y="36" width="44" height="3" fill="#222"/></svg>',
   osprey: '<svg viewBox="0 0 120 50"><rect x="22" y="24" width="80" height="12" rx="6" fill="#7a8088"/><rect x="50" y="18" width="30" height="4" fill="#6a7078"/><rect x="58" y="6" width="8" height="16" rx="3" fill="#6a7078"/><rect x="40" y="5" width="44" height="2" fill="#222"/><path d="M22 26l-8-12h7l9 12z" fill="#7a8088"/></svg>',
+  shuttle: '<svg viewBox="0 0 120 50"><rect x="8" y="22" width="78" height="14" rx="7" fill="#d2691e"/><path d="M14 14h62l20 6-20 6H14z" fill="#f2f2ee"/><path d="M26 26l28 10 10-10z" fill="#1c1d21"/><path d="M14 14l-6-10h10l8 10z" fill="#f2f2ee"/><rect x="10" y="36" width="76" height="7" rx="3" fill="#f2f2ee"/></svg>',
   tank: '<svg viewBox="0 0 120 50"><rect x="14" y="30" width="92" height="12" rx="6" fill="#2b2b2b"/><rect x="18" y="22" width="84" height="10" fill="#b8a77a"/><rect x="38" y="13" width="36" height="10" rx="2" fill="#a8986c"/><rect x="72" y="16" width="40" height="3" fill="#6e6448"/></svg>',
   car: '<svg viewBox="0 0 120 50"><path d="M10 34c0-6 4-9 12-10l14-8h36l16 8c12 1 22 4 22 10v4H10z" fill="#c8102e"/><path d="M40 18h30l12 7H32z" fill="#15222f"/><circle cx="30" cy="38" r="7" fill="#151515"/><circle cx="90" cy="38" r="7" fill="#151515"/></svg>',
   moto: '<svg viewBox="0 0 120 50"><circle cx="28" cy="36" r="10" fill="none" stroke="#151515" stroke-width="5"/><circle cx="92" cy="36" r="10" fill="none" stroke="#151515" stroke-width="5"/><path d="M30 34l20-12h26l14 12z" fill="#1f5fd1"/><path d="M56 20c4-8 14-10 18-4l-6 6z" fill="#22252b"/><circle cx="70" cy="10" r="5" fill="#f2f2f2"/></svg>',
   af1: '<svg viewBox="0 0 120 50"><path d="M10 28c0-6 6-8 12-8h70c8 0 14 4 16 8z" fill="#fff"/><path d="M10 28h98c-2 4-8 6-16 6H22c-6 0-12-2-12-6z" fill="#8fb3d9"/><rect x="14" y="27" width="92" height="1.6" fill="#1f3f7a"/><path d="M14 22l-6-14h8l10 14z" fill="#1f3f7a"/><path d="M90 20c2-4 8-4 12 0z" fill="#fff"/></svg>'
 };
 var STARTS = [['runway', '🛫 Runway 05', 'Doylestown Airport'], ['town', '🏙️ Downtown', 'Main St, Doylestown'], ['range', '🎯 Target Range', 'Tanks, trucks & bunkers'], ['shrine', '⛪ The Shrine', 'Our Lady of Czestochowa'], ['newhope', '🌉 New Hope', 'By the Delaware River'], ['helipad', '🚁 Helipad', 'Airport apron'], ['water', '🌊 Lake Galena', 'Seaplane only'], ['hand', '✋ Hand toss', 'Launch at the airport'], ['air', '☁️ In the air', 'Start already flying']];
-function startOK(s) { var t = T[game.plane]; var gs = ['runway', 'town', 'range', 'shrine', 'newhope']; if (t.ground) return gs.indexOf(s) >= 0; if (s !== 'runway' && gs.indexOf(s) >= 0) return false; if (s === 'water') return !!t.water; if (s === 'helipad') return !!(t.heli || t.tilt); if (t.heli && s !== 'helipad' && s !== 'air' && s !== 'pcs') return false; return true; }
+function startOK(s) { var t = T[game.plane]; if (t.shuttle) return s === 'runway'; var gs = ['runway', 'town', 'range', 'shrine', 'newhope']; if (t.ground) return gs.indexOf(s) >= 0; if (s !== 'runway' && gs.indexOf(s) >= 0) return false; if (s === 'water') return !!t.water; if (s === 'helipad') return !!(t.heli || t.tilt); if (t.heli && s !== 'helipad' && s !== 'air' && s !== 'pcs') return false; return true; }
 function buildMenu() {
   var pr = $('planeRow'); pr.innerHTML = '';
   PLANES.forEach(function (k) {
@@ -2125,7 +2295,8 @@ function buildMenu() {
   if (t.heli) help = '<li><b>Left stick ↕</b> collective (lift) — about halfway hovers · <b>↔</b> spin left/right</li><li><b>Right stick</b> tilts the helicopter to fly in that direction</li>';
   else if (t.ch === 3) help = '<li><b>Left stick ↕</b> throttle (stays put like a real transmitter)</li><li><b>Right stick ↔</b> turn (differential motors) · <b>↕</b> elevator</li>';
   else help = '<li><b>Left stick ↕</b> throttle (stays put) · <b>↔</b> rudder / steer on the ground</li><li><b>Right stick ↔</b> ailerons (roll) · <b>↕</b> elevator</li>';
-  if (!t.ground && game.easy) help = (t.heli || t.tilt ? '<li><b>Easy flying:</b> hold <b>↑</b> (or push the right stick up) to take off and fly forward · <b>← →</b> turn · let go to hover · hold <b>↓</b> to slow down, then keep holding to land.</li>' : '<li><b>Easy flying:</b> hold <b>↑</b> on the runway to take off, then <b>↑</b> climb · <b>↓</b> descend · <b>← →</b> turn (or use the right stick). The computer handles the throttle and keeps the wings level. To land, line up with the runway and hold <b>↓</b> gently.</li>');
+  if (t.shuttle) help = '<li><b>Space Shuttle:</b> starts on the launch pad. Press <b>↑</b> or <b>🚀 LAUNCH</b> (Enter). <b>← →</b> steer the climb. Watch the boosters and the tank fall away as you reach space!</li><li>In orbit, the arrows look around. Press <b>🌎 Return to Earth</b> (Enter) to come home. Then glide in to Doylestown Airport: <b>↑ ↓</b> nose, <b>← →</b> turn, and keep the glide shallow for a soft landing.</li>';
+  else if (!t.ground && game.easy) help = (t.heli || t.tilt ? '<li><b>Easy flying:</b> hold <b>↑</b> (or push the right stick up) to take off and fly forward · <b>← →</b> turn · let go to hover · hold <b>↓</b> to slow down, then keep holding to land.</li>' : '<li><b>Easy flying:</b> hold <b>↑</b> on the runway to take off, then <b>↑</b> climb · <b>↓</b> descend · <b>← →</b> turn (or use the right stick). The computer handles the throttle and keeps the wings level. To land, line up with the runway and hold <b>↓</b> gently.</li>');
   if (!t.ground && !game.easy) help += '<li>Keyboard: <b>arrow keys</b> only — <b>↑ / ↓</b> throttle' + (t.heli ? ' (lift)' : ' (more throttle climbs, less descends)') + ' · <b>← / →</b> steer' + (TOUR ? '' : ' · <b>F</b> guns · <b>R</b> rockets') + '</li>';
   if (t.ground) help = '<li><b>Drive:</b> arrow keys — <b>↑</b> gas · <b>↓</b> brake' + (game.real ? '' : ' (hold to back up)') + ' · <b>← →</b> steer · <b>H</b> horn</li><li>Touch: slide the <b>steer pad</b>, hold <b>GAS</b> and <b>BRAKE</b>, tap <b>Horn</b>.</li>' + (game.real ? '<li><b>Realistic:</b> ' + (game.plane === 'tank' ? 'the tank is heavy — it takes time to get moving and stop, turns slowly on the move and pivots when stopped; hold ↓ when stopped to back up.' : 'start in <b>N</b> — press <b>Shift</b> (or ▲) for 1st and shift up as it revs, <b>Ctrl</b> (or ▼) to shift down; go below 1st for <b>R</b>everse. ' + (game.plane === 'moto' ? 'The bike leans into turns, so start the turn early.' : 'Corner too fast and the tyres slide wide.')) + '</li>' : '<li><b>Easy:</b> automatic — just gas, brake and steer. Turn on <b>Realistic driving</b> below for gears, grip and momentum.</li>') + '<li>Cars and motorcycles are fastest on the roads. Drive to downtown, the Shrine, the airport, Camp Curiosity or New Hope.</li>';
   if (t.tilt) help += '<li>Tap <b>VTOL ⇄ Plane</b> to tilt the rotors. Hover mode works like the helicopter.</li>';
@@ -2158,6 +2329,7 @@ $('bSound').onclick = function () { game.sound = !game.sound; initAudio(); syncB
 if ($('bRings')) $('bRings').onclick = function () { ringRun.on = !ringRun.on; if (ringRun.on) startRings(); else stopRings(); syncBtns(); };
 if ($('bAuto')) $('bAuto').onclick = function () {
   if (T[S.type].heli) { toast('Autopilot is for the plane — fly the helicopter yourself!', 2); return; } game.auto = !game.auto; syncBtns(); toast(game.auto ? 'Autopilot ON' : 'Autopilot OFF — you have control', 1.6); };
+$('bShut').addEventListener('pointerdown', function (e) { e.preventDefault(); initAudio(); shuttleLaunchPressed(); });
 $('bVtol').onclick = function () { S.vtol = !S.vtol; toast(S.vtol ? 'Hover mode — rotors up' : 'Plane mode — rotors forward', 1.4); if (!S.vtol && S.onSurface) toast('Plane mode: roll down the runway to take off', 2); syncBtns(); };
 $('bSwap').onclick = function () { S.battery = 1; game.emptyShown = false; beep(880, 0.08); beep(1320, 0.1, 0.1); toast('🔋 Fresh battery!', 1.4); };
 function holdBtn(el, key) {
@@ -2225,6 +2397,7 @@ addEventListener('keydown', function (e) {
     if (k === 'h' && !e.repeat) horn();
     if (hasGears() && !e.repeat) { if (k === 'shift') setGearG((S.gear || 0) + 1); if (k === 'control') setGearG((S.gear || 0) - 1); }
   }
+  if (k === 'enter' && S.type === 'shuttle') shuttleLaunchPressed();
   if (k === ' ' || k === 'f') input.fire = true; if (k === 'b' || k === 'r') input.alt = true;
   if (['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].indexOf(k) >= 0) takeover();
   if (e.key.indexOf('Arrow') === 0 || e.key === ' ') e.preventDefault();
@@ -2376,7 +2549,11 @@ function update(dt) {
   game.time += dt;
   waterTex.offset.x += dt * 0.004; waterTex.offset.y += dt * 0.002;
   var Tt = T[S.type], sc = Tt.scale;
-  if (game.playing && !game.paused && Tt.ground) {
+  if (game.playing && !game.paused && Tt.shuttle) {
+    if (S.state === 'ok') shuttleStep(dt); shuttleUpdateDebris(dt);
+    var altS = S.pos.y - G(clamp(S.pos.x, -2400, 3300), clamp(S.pos.z, -2400, 1800)); $('sAlt').textContent = altS > 5000 ? Math.round(altS / 1609) + ' mi' : Math.round(altS * 3.281) + ' ft';
+    $('sSpd').textContent = Math.round((SH.phase === 'ascent' || SH.phase === 'glide' || SH.phase === 'landed' ? SH.v || 0 : SH.phase === 'reentry' ? 7000 : SH.phase === 'orbit' ? 7600 : 0) * (SH.phase === 'orbit' || SH.phase === 'reentry' ? 2.237 : 2.237)) + ' mph'; $('sBat').textContent = '🛰️';
+  } else if (game.playing && !game.paused && Tt.ground) {
     if (S.state === 'ok') groundStep(dt);
     if (!TOUR && game.weapons) { fireWeapons(dt); updateWeapons(dt, game.time); }
     $('sSpd').textContent = Math.round(Math.abs(S.gspd) * 2.237) + ' mph'; $('sAlt').textContent = '0 ft'; $('sBat').textContent = '⛽'; $('bSwap').style.display = 'none';
@@ -2543,9 +2720,9 @@ function updateCamera(dt) {
   if (game.cam === 0) {
     var flat = tmpV.copy(tmpF).setY(0);
     if (flat.lengthSq() > 0.01 && S.state === 'ok') { flat.normalize(); camHead.lerp(flat, 1 - Math.exp(-dt * 3)).normalize(); }
-    var dist = 2.2 * sc + 1.2;
-    var want = tmpU.copy(S.pos).addScaledVector(camHead, -dist); want.y += 0.65 * sc + 0.4;
-    camera.position.lerp(want, 1 - Math.exp(-dt * 5));
+    var dist = S.type === 'shuttle' ? (SH.phase === 'pad' || SH.phase === 'ascent' ? 95 : SH.phase === 'orbit' ? 55 : 70) : 2.2 * sc + 1.2;
+    var want = tmpU.copy(S.pos).addScaledVector(camHead, -dist); want.y += S.type === 'shuttle' ? (SH.phase === 'pad' ? 12 : SH.phase === 'ascent' ? -15 : SH.phase === 'orbit' ? 95 : 14) : 0.65 * sc + 0.4;
+    if (S.type === 'shuttle' && SH.phase !== 'pad' && SH.phase !== 'landed') camera.position.copy(want); else camera.position.lerp(want, 1 - Math.exp(-dt * 5));
     var floor = G(camera.position.x, camera.position.z) + 0.4; if (camera.position.y < floor) camera.position.y = floor;
     lookAt.copy(S.pos).addScaledVector(tmpF, 0.6 * sc); lookAt.y += 0.15 * sc; camera.lookAt(lookAt); setFov(62, dt); pilot.visible = true;
   } else if (game.cam === 1) {
@@ -2587,7 +2764,7 @@ function render(dt) {
   updateCamera(dt); updateMarkers(); updateAudio();
   miniT -= dt; if (miniT <= 0 && game.playing) { miniT = 0.1; drawMini(); }
   labels.forEach(function (l) { var d = l.position.distanceTo(camera.position); l.visible = d < 1400 && d > 45; var s = clamp(d / 22, 14, 60); l.scale.set(s * l.userData.asp, s, 1); });
-  sky.position.copy(camera.position);
+  sky.position.copy(camera.position); STARS.position.copy(camera.position);
   renderer.render(scene, camera);
 }
 var last = performance.now();
