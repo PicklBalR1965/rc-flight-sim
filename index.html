@@ -406,8 +406,16 @@ var CAMPUSMAP = (function () {
     { t: 'Pine Run', x: -90, z: creekZ(-90), h: 12, c: '#8fe0ff' },
     { t: 'Sport Court', x: 73, z: 19, h: 12 },
     { t: 'Mini Golf', x: 96, z: -119, h: 12 },
-    { t: 'Sand Lot', x: 125, z: -54, h: 12 },
-    { t: 'Gazebo', x: 160, z: 50, h: 12 },
+        { t: 'Gazebo', x: 160, z: 50, h: 12 },
+    { t: 'Golf Driving Range', x: 68, z: -88, h: 14, c: '#c8ff8a' },
+    { t: 'Archery', x: 192, z: -8, h: 12, c: '#ffb36b' },
+    { t: 'Gaga Pit', x: 177, z: 51, h: 10, c: '#ffb36b' },
+    { t: 'Drop Off & Pickup', x: 97, z: 62, h: 12, c: '#ffd94f' },
+    { t: 'Lunch', x: 13, z: 20, h: 12, c: '#ffd94f' },
+    { t: 'Sand Volleyball', x: 125, z: -64, h: 10 },
+    { t: 'Garden', x: -6, z: 88, h: 8, c: '#8ff0a8' },
+    { t: 'Fire Circle', x: 62, z: 96, h: 8 },
+    { t: 'Shuffleboard & Chess', x: -98, z: 44, h: 8 },
     { t: 'Landisville Rd', x: -120, z: 121, h: 8 }
   ];
 
@@ -525,7 +533,14 @@ var CAMPUSMAP = (function () {
     var sc = tex(256, 160, function (c, w, h) { c.fillStyle = '#8d9296'; c.fillRect(0, 0, w, h); c.strokeStyle = '#f2f2f2'; c.lineWidth = 3; c.strokeRect(12, 12, w / 2 - 18, h - 24); c.strokeRect(w / 2 + 6, 12, w / 2 - 18, h - 24); c.beginPath(); c.moveTo(w / 4, 12); c.lineTo(w / 4, h - 12); c.moveTo(3 * w / 4, 12); c.lineTo(3 * w / 4, h - 12); c.stroke(); });
     flat(31, 20, new THREE.MeshLambertMaterial({ map: sc }), 73, 19, 0.09, -0.35);
     // Pool + kiddie pool
-    var dk = flat(POOL.deck[0] * 2, POOL.deck[1] * 2, lamb(0xe9e4d6), POOL.x, POOL.z, 0.1, -POOL.a);
+    function ringDeck(cx, cz, ox, oz, ix, iz, ang, col) {
+      var sh = new THREE.Shape(); sh.moveTo(-ox, -oz); sh.lineTo(ox, -oz); sh.lineTo(ox, oz); sh.lineTo(-ox, oz); sh.lineTo(-ox, -oz);
+      var hole = new THREE.Path(); hole.moveTo(-ix, -iz); hole.lineTo(-ix, iz); hole.lineTo(ix, iz); hole.lineTo(ix, -iz); hole.lineTo(-ix, -iz); sh.holes.push(hole);
+      var g = new THREE.ShapeGeometry(sh); g.rotateX(-Math.PI / 2); var m = new THREE.Mesh(g, lamb(col)); m.rotation.y = ang;
+      var e = rot(ox - 0.3, 0, -ang * -1); m.position.set(o.x + cx, ground(cx + (ox - 0.4) * Math.cos(ang), cz - (ox - 0.4) * Math.sin(ang)) + 0.09, o.z + cz); m.receiveShadow = true; scene.add(m); return m;
+    }
+    var dk = ringDeck(POOL.x, POOL.z, POOL.deck[0], POOL.deck[1], POOL.hx, POOL.hz, -POOL.a, 0xe9e4d6);
+    ringDeck(KIDDIE.x, KIDDIE.z, KIDDIE.hx + 2, KIDDIE.hz + 2, KIDDIE.hx, KIDDIE.hz, 0, 0xe9e4d6);
     var pw = tex(256, 128, function (c, w, h) { c.fillStyle = '#3fb4e6'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(20,70,140,.5)'; for (var i = 1; i < 6; i++) c.fillRect(30, i * h / 6 - 2, w - 60, 4); c.fillStyle = 'rgba(255,255,255,.3)'; c.fillRect(0, 0, 40, h); });
     var poolW = new THREE.Mesh(new THREE.PlaneGeometry(POOL.hx * 2, POOL.hz * 2), new THREE.MeshPhongMaterial({ map: pw, transparent: true, opacity: 0.88, shininess: 120 }));
     poolW.rotation.order = 'YXZ'; poolW.rotation.set(-Math.PI / 2, -POOL.a, 0);
@@ -569,6 +584,96 @@ var CAMPUSMAP = (function () {
       var dx = f[2] - f[0], dz = f[3] - f[1], L = Math.hypot(dx, dz), mx = (f[0] + f[2]) / 2, mz = (f[1] + f[3]) / 2;
       var fm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, L), rail); fm.rotation.y = Math.atan2(dx, dz); fm.position.set(o.x + mx, ground(mx, mz) + 1, o.z + mz); scene.add(fm);
     });
+    // ---------- activity areas & pool details ----------
+    function bx(w, h, d, col, lx, lz, y, ry, solid) {
+      var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof col === 'number' ? lamb(col) : col);
+      var gy = ground(lx, lz); m.position.set(o.x + lx, gy + (y || 0) + h / 2, o.z + lz); m.rotation.y = ry || 0; add(m);
+      if (solid) cb.solid(o.x + lx - w / 2, o.x + lx + w / 2, o.z + lz - d / 2, o.z + lz + d / 2, gy + (y || 0) + h);
+      return m;
+    }
+    function cyl(r1, r2, h, col, lx, lz, y, seg) { var m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg || 12), typeof col === 'number' ? lamb(col) : col); m.position.set(o.x + lx, ground(lx, lz) + (y || 0) + h / 2, o.z + lz); add(m); return m; }
+    function post(lx, lz, h, col) { return bx(0.12, h, 0.12, col || 0x9aa0a6, lx, lz, 0); }
+    function shadeRoof(lx, lz, w, d, col, h, ry) { // posts + flat metal roof (the blue shade structures)
+      var c = Math.cos(ry || 0), s2 = Math.sin(ry || 0);
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (k) { var px = k[0] * w / 2 * 0.9, pz = k[1] * d / 2 * 0.9; post(lx + px * c + pz * s2, lz - px * s2 + pz * c, h, 0xdddddd); });
+      bx(w, 0.18, d, col, lx, lz, h, ry);
+    }
+    // pool frame helper: local pool coords -> campus coords
+    var PA = POOL.a, PY = -POOL.a;
+    function pp(px, pz) { var r = rot(px, pz, PA); return [POOL.x + r[0], POOL.z + r[1]]; }
+    // chain-link fence around the pool deck (see-through)
+    var chain = new THREE.MeshLambertMaterial({ color: 0x8c9399, transparent: true, opacity: 0.32 });
+    var FW = POOL.deck[0] + 4, FD = POOL.deck[1] + 10, pyh = cb.poolWaterY !== undefined ? 0 : 0;
+    [[0, -FD, FW * 2, 0.06], [0, FD, FW * 2, 0.06], [-FW, 0, 0.06, FD * 2], [FW, 0, 0.06, FD * 2]].forEach(function (f) {
+      var c = pp(f[0], f[1]), m = new THREE.Mesh(new THREE.BoxGeometry(f[2], 1.5, f[3]), chain);
+      m.position.set(o.x + c[0], ground(c[0], c[1]) + 0.85, o.z + c[1]); m.rotation.y = PY; scene.add(m);
+      var n = Math.max(2, Math.round(Math.max(f[2], f[3]) / 3));
+      for (var i = 0; i <= n; i++) { var t = i / n - 0.5, q = pp(f[0] + (f[2] > 1 ? t * f[2] : 0), f[1] + (f[3] > 1 ? t * f[3] : 0)); post(q[0], q[1], 1.6, 0x7d858c); }
+    });
+    // lifeguard chairs (white) on both long sides
+    [[-4, -POOL.hz - 1.6], [5, POOL.hz + 1.6]].forEach(function (l) { var c = pp(l[0], l[1]); bx(1.1, 1.6, 1.1, 0xf4f4f2, c[0], c[1], 0, PY); bx(1.2, 0.9, 0.3, 0xf4f4f2, c[0], c[1], 1.6, PY); });
+    // slide on the deep end
+    (function () { var c = pp(POOL.hx - 1.5, POOL.hz + 2.2); bx(1.2, 2.2, 1.2, 0xf2f2f0, c[0], c[1], 0, PY); var sl = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.2, 4), lamb(0xf2f2f0)); var c2 = pp(POOL.hx - 1.5, POOL.hz + 0.3); sl.position.set(o.x + c2[0], ground(c2[0], c2[1]) + 1.2, o.z + c2[1]); sl.rotation.order = 'YXZ'; sl.rotation.set(-0.5, PY, 0); add(sl); })();
+    // blue shade structures, umbrellas, pergola
+    [[-POOL.deck[0] + 2, -POOL.deck[1] - 2.5, 5, 3.5], [0, POOL.deck[1] + 2.5, 5, 3.5], [POOL.deck[0] + 3, 6, 4, 4]].forEach(function (s3) { var c = pp(s3[0], s3[1]); shadeRoof(c[0], c[1], s3[2], s3[3], 0x3b5f8f, 2.6, PY); });
+    [[-12, POOL.deck[1] - 2, 0x33b36b], [9, -POOL.deck[1] + 2, 0x2fa8d8], [13, POOL.deck[1] - 2, 0xe6c93a]].forEach(function (u) { var c = pp(u[0], u[1]); post(c[0], c[1], 2.2, 0xeeeeee); cyl(0.01, 1.4, 0.5, u[2], c[0], c[1], 2.0, 8); });
+    (function () { var c = pp(-POOL.deck[0] + 2.5, 3); for (var i = 0; i < 4; i++) { var k = pp(-POOL.deck[0] + 1 + (i % 2) * 3, 1 + (i > 1 ? 4 : 0)); post(k[0], k[1], 2.4, 0x8b6a4a); } for (var j = 0; j < 5; j++) { var b = pp(-POOL.deck[0] + 2.5, 0.6 + j * 1.1); bx(3.6, 0.12, 0.15, 0x8b6a4a, b[0], b[1], 2.4, PY); } })();
+    // lounge chairs along the deck
+    for (var lc = 0; lc < 6; lc++) { var c = pp(-10 + lc * 3.2, -POOL.hz - 2.6); bx(0.7, 0.3, 1.8, 0xf6f6f6, c[0], c[1], 0, PY); }
+    // pool-side garden bed (the planted strip between the pools)
+    (function () { var c = pp(POOL.hx + 3, -2); var g = new THREE.Mesh(new THREE.PlaneGeometry(4, 8), lamb(0x5e8f45)); g.rotation.order = 'YXZ'; g.rotation.set(-Math.PI / 2, PY, 0); g.position.set(o.x + c[0], ground(c[0], c[1]) + 0.14, o.z + c[1]); scene.add(g);
+      for (var i = 0; i < 10; i++) { var f = pp(POOL.hx + 2 + (i % 3), -5 + i * 0.7); var bush = new THREE.Mesh(new THREE.SphereGeometry(0.45, 6, 5), lamb(i % 3 ? 0x4c7f3a : 0xf2f0e6)); bush.position.set(o.x + f[0], ground(f[0], f[1]) + 0.4, o.z + f[1]); scene.add(bush); } })();
+    // kiddie splash pad toys
+    [[0x33b36b, -1, -1], [0xe5483b, 1, 1], [0xffcf3a, 1.2, -1.3]].forEach(function (k) { cyl(0.35, 0.35, 0.9, k[0], KIDDIE.x + k[1], KIDDIE.z + k[2], -0.4, 10); });
+
+    // Golf driving range: hitting mats under the shade line, yardage flags out in the field
+    for (var gm = 0; gm < 8; gm++) { var gx = C2.x - 17 + gm * 4.8; flat(1.6, 1.6, lamb(0x2f8f3c), gx, C2.z - 15.5, 0.12); }
+    [[-12, -40, 0xe5483b], [4, -55, 0xffcf3a], [16, -72, 0x3d7fc1]].forEach(function (f) { var fx = C2.x + f[0], fz = C2.z + f[1]; post(fx, fz, 2.4, 0xeeeeee); bx(0.9, 0.55, 0.05, f[2], fx + 0.45, fz, 1.8); flat(4, 4, lamb(0x7cc46a), fx, fz, 0.1); });
+
+    // Archery: shooting line, hay-bale targets on stands, backstop
+    var AR = { x: 192, z: -8 };
+    flat(16, 0.5, lamb(0xf2f2f2), AR.x, AR.z + 12, 0.11);
+    var tgt = tex(64, 64, function (c, w, h) { var cols = ['#f4f4f4', '#222', '#2f7fd0', '#e5483b', '#ffd23a']; for (var i = 0; i < 5; i++) { c.fillStyle = cols[i]; c.beginPath(); c.arc(32, 32, 30 - i * 6, 0, 7); c.fill(); } });
+    for (var at = 0; at < 4; at++) {
+      var tx = AR.x - 6 + at * 4, tz = AR.z - 12, gy2 = ground(tx, tz);
+      bx(1.6, 1.2, 1, 0xd8c27a, tx, tz, 0, 0, true);
+      var face = new THREE.Mesh(new THREE.CircleGeometry(0.75, 24), new THREE.MeshLambertMaterial({ map: tgt })); face.position.set(o.x + tx, gy2 + 1.9, o.z + tz + 0.32); scene.add(face);
+      bx(1.5, 1.5, 0.6, 0xd8c27a, tx, tz, 1.2);
+    }
+    bx(20, 3, 0.4, 0x5a4632, AR.x, AR.z - 15, 0, 0, true);
+    for (var bn = 0; bn < 3; bn++) bx(2.2, 0.45, 0.5, 0x8b6a4a, AR.x - 5 + bn * 5, AR.z + 15, 0);
+
+    // Gaga pit: low octagon wall on the round pad
+    (function () { var GX = 177, GZ = 51, R = 4.6, gy3 = ground(GX, GZ); for (var i = 0; i < 8; i++) { var a = (i + 0.5) / 8 * Math.PI * 2, side = 2 * R * Math.tan(Math.PI / 8); var m = new THREE.Mesh(new THREE.BoxGeometry(side, 0.9, 0.18), lamb(0x8a6440)); m.position.set(o.x + GX + Math.cos(a) * R, gy3 + 0.45, o.z + GZ + Math.sin(a) * R); m.rotation.y = -a + Math.PI / 2; add(m); } cb.solid(o.x + GX - R, o.x + GX + R, o.z + GZ - R, o.z + GZ + R, gy3 + 0.9); })();
+
+    // Sand volleyball net
+    [[-8, 0], [8, 0]].forEach(function (p) { post(125 + p[0], -54 + p[1], 2.6, 0xeeeeee); });
+    bx(16, 0.9, 0.04, new THREE.MeshLambertMaterial({ color: 0x222222, transparent: true, opacity: 0.6 }), 125, -54, 1.6);
+
+    // Drop off & pickup: bus pull-off and a yellow camp bus
+    flat(7, 26, lamb(surfColor('gravel')), 104, 62, 0.075);
+    bx(2.6, 3, 11, 0xf2b705, 105, 62, 0.5, 0, true); bx(2.62, 0.9, 10.6, 0x30343a, 105, 62, 2.1);
+    [[-3.6], [3.6]].forEach(function (w2) { [-1.35, 1.35].forEach(function (sx) { var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.35, 14), lamb(0x1d1d1d)); wh.rotation.z = Math.PI / 2; wh.position.set(o.x + 105 + sx, ground(105, 62) + 0.55, o.z + 62 + w2[0]); scene.add(wh); }); });
+
+    // Lunch: picnic tables under the camp pavilion
+    shadeRoof(16, 34, 10, 6, 0x2e7d4f, 3, 0);
+    for (var pt = 0; pt < 3; pt++) { bx(1.2, 0.75, 2.6, 0x8b6a4a, 13 + pt * 3, 34, 0); }
+
+    // Garden: fenced raised beds by the farmhouse
+    (function () { var GX = -6, GZ = 88; flat(12, 10, lamb(0x7a5a3a), GX, GZ, 0.1); for (var r2 = 0; r2 < 3; r2++) for (var c2 = 0; c2 < 2; c2++) { bx(4.2, 0.45, 1.8, 0x8b6a4a, GX - 2.6 + c2 * 5.2, GZ - 3 + r2 * 3, 0); var veg = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.35, 1.5), lamb(0x4f9a3c)); veg.position.set(o.x + GX - 2.6 + c2 * 5.2, ground(GX, GZ) + 0.6, o.z + GZ - 3 + r2 * 3); scene.add(veg); }
+      [[0, -5, 12, 0.06], [0, 5, 12, 0.06], [-6, 0, 0.06, 10], [6, 0, 0.06, 10]].forEach(function (f) { var m = new THREE.Mesh(new THREE.BoxGeometry(f[2], 1.3, f[3]), chain); m.position.set(o.x + GX + f[0], ground(GX, GZ) + 0.65, o.z + GZ + f[1]); scene.add(m); }); cb.solid(o.x + GX - 6, o.x + GX + 6, o.z + GZ - 5, o.z + GZ + 5, ground(GX, GZ) + 1.3); })();
+
+    // Fire circle: stone ring with log benches
+    (function () { var FX = 62, FZ = 96; flat(9, 9, lamb(0xbdb4a2), FX, FZ, 0.09); var ring = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.3, 6, 12), lamb(0x8d8a84)); ring.rotation.x = Math.PI / 2; ring.position.set(o.x + FX, ground(FX, FZ) + 0.25, o.z + FZ); scene.add(ring);
+      for (var i = 0; i < 6; i++) { var a = i / 6 * Math.PI * 2, lg = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 2.4, 8), lamb(0x6b4a2e)); lg.rotation.z = Math.PI / 2; lg.rotation.y = -a + Math.PI / 2; lg.position.set(o.x + FX + Math.cos(a) * 3.6, ground(FX, FZ) + 0.3, o.z + FZ + Math.sin(a) * 3.6); add(lg); } })();
+
+    // Shuffleboard courts and the giant chess board (west of the pool)
+    flat(3, 18, lamb(0xd6d1c3), -112, 32, 0.09, 0.35); flat(3, 18, lamb(0xd6d1c3), -107, 30, 0.09, 0.35);
+    (function () { var ch = tex(64, 64, function (c) { for (var i = 0; i < 8; i++) for (var j = 0; j < 8; j++) { c.fillStyle = (i + j) % 2 ? '#f3efe6' : '#b0473a'; c.fillRect(i * 8, j * 8, 8, 8); } }); flat(5, 5, new THREE.MeshLambertMaterial({ map: ch }), -82, 66, 0.1); })();
+
+    // Soccer goals out on the east field
+    [[150, 5, 0], [150, 95, Math.PI]].forEach(function (g) { var gx = g[0], gz = g[1]; post(gx - 2.4, gz, 2, 0xffffff); post(gx + 2.4, gz, 2, 0xffffff); bx(4.9, 0.12, 0.12, 0xffffff, gx, gz, 1.95); bx(4.9, 2, 1.4, new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.18 }), gx, gz + (g[2] ? 0.7 : -0.7), 0); });
+
     LABELS.forEach(function (l) { cb.label(l.t, o.x + l.x, ground(l.x, l.z) + l.h, o.z + l.z, l.c); });
     return meshes;
   }
@@ -594,7 +699,7 @@ var CAMPUSMAP = (function () {
   var SPOTS = {
     barn: { x: -156, z: -48 }, courts: { x: -52, z: -54 }, courts2: { x: 68, z: -43 }, academy: { x: 3, z: -2 }, camp: { x: 36, z: 20 },
     pool: { x: -53, z: 23 }, pond: { x: -35, z: -125 }, creek: { x: -90, z: creekZ(-90) }, farm: { x: -150, z: -120 }, house: { x: 8, z: 57 },
-    minigolf: { x: 96, z: -119 }, sand: { x: 125, z: -54 }, gazebo: { x: 160, z: 50 }, entrance: { x: 97, z: 112 }, bridge: { x: BRIDGE.x, z: creekZ(BRIDGE.x) }
+    minigolf: { x: 96, z: -119 }, sand: { x: 125, z: -54 }, range: { x: 68, z: -62 }, archery: { x: 192, z: -8 }, gaga: { x: 177, z: 51 }, dropoff: { x: 104, z: 62 }, garden: { x: -6, z: 88 }, gazebo: { x: 160, z: 50 }, entrance: { x: 97, z: 112 }, bridge: { x: BRIDGE.x, z: creekZ(BRIDGE.x) }
   };
 
   return { POND: POND, POOL: POOL, KIDDIE: KIDDIE, BRIDGE: BRIDGE, creekZ: creekZ, waterCarve: waterCarve, poolHeight: poolHeight, onBridge: onBridge,
@@ -1097,7 +1202,7 @@ var CM = CAMPUSMAP, CAMP = {};
     pondWater: new THREE.MeshPhongMaterial({ color: 0x4f7f5a, transparent: true, opacity: 0.9, shininess: 90 })
   });
   var S0 = CM.SPOTS; function w(s) { return { x: cx + s.x, z: cz + s.z }; }
-  CAMP.barn = w(S0.barn); CAMP.courts = w(S0.courts); CAMP.academy = w(S0.academy); CAMP.camp = w(S0.camp); CAMP.farm = w(S0.farm); CAMP.pool = w(S0.pool); CAMP.pond = w(S0.pond);
+  CAMP.barn = w(S0.barn); CAMP.courts = w(S0.courts); CAMP.academy = w(S0.academy); CAMP.camp = w(S0.camp); CAMP.farm = w(S0.farm); CAMP.pool = w(S0.pool); CAMP.pond = w(S0.pond); CAMP.range = w(S0.range); CAMP.archery = w(S0.archery); CAMP.gaga = w(S0.gaga);
   if (TOUR) label('Camp Curiosity · 4425 Landisville Rd', cx, gy + 70, cz + 40, '#ffffff');
 })();
 scene.add(MG.build());
@@ -1734,7 +1839,9 @@ var TOUR_STOPS = [
   { x: RA.x, y: RWY.h + 28, z: RA.z, title: 'Doylestown Airport', text: 'Lifting off runway 05. Landisville Road is just to the north-east — follow the yellow rings!' },
   { x: CAMPUS.x - 260, y: g0 + 45, z: CAMPUS.z + 120, title: 'Landisville Road', text: 'Camp Curiosity sits on a 55-acre farm right off Landisville Road. That’s it ahead!' },
   { x: ac0.x - 10, y: g0 + 32, z: ac0.z + 30, title: 'Curiosity Academy', text: 'The preschool and Toddler Center. The Curiosity story goes back to 1965, when Ellen Thomas cared for the neighborhood kids.' },
-  { x: po0.x + 10, y: g0 + 30, z: po0.z + 25, title: 'Camp Curiosity', text: 'Summer camp! The pool, the camp buildings and big open fields — in the summer the staff grows to about 75.' },
+  { x: po0.x + 10, y: g0 + 30, z: po0.z + 25, title: 'Camp Curiosity', text: 'Summer camp! The lap pool and splash pool, lunch by the camp building, the garden and big open fields — in the summer the staff grows to about 75.' },
+  { x: CAMP.gaga.x + 5, y: g0 + 30, z: CAMP.gaga.z - 30, title: 'Archery, Gaga & the Fields', text: 'Drop off & pickup by the bus, the gaga pit, archery range, soccer goals and sand volleyball — the Merit Program in action.' },
+  { x: CAMP.range.x, y: g0 + 30, z: CAMP.range.z + 10, title: 'Golf Driving Range', text: 'Hitting mats under the shade line and yardage flags out past courts 13–16 — putting, chipping and driving merits.' },
   { x: pd0.x, y: g0 + 30, z: pd0.z + 30, title: 'The Pond', text: 'The camp pond with its dock, and Pine Run creek winding through the woods just beyond it.' },
   { x: fr0.x + 10, y: g0 + 32, z: fr0.z + 30, title: 'The Farm', text: 'Paddocks and farm sheds — Camp Curiosity is a camp, a school and a farm.' },
   { x: oc0.x, y: g0 + 30, z: oc0.z - 30, title: 'Doylestown Pickleball', text: 'Courts 1–12 here, courts 13–16 across the lot, plus 5 indoor courts in the Pickle Barn — 21 courts in all.' },
