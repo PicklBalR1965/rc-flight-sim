@@ -351,7 +351,7 @@ var CAMPUSMAP = (function () {
   var POOL = { x: -53, z: 23, hx: 11.5, hz: 5.5, a: -0.64, deck: [17, 10] };
   var KIDDIE = { x: -40, z: 35, hx: 3, hz: 3 };
   function creekZ(x) { return -182 + 8 * Math.sin(x / 30) + 5 * Math.sin(x / 13); }
-  var BRIDGE = { x: 26, half: 3.6, len: 26, top: 0.8 };
+  var BRIDGE = { x: 226.3, half: 4.6, len: 26, top: 0.8 };   // Burnt House Hill Rd over Pine Run
 
   // ---- surfaces ----
   var ROADS = [
@@ -360,8 +360,8 @@ var CAMPUSMAP = (function () {
     { surf: 'gravel', w: 6, pts: [[97, 118], [96, -12], [86, -25], [60, -28]] },                                  // east driveway
     { surf: 'gravel', w: 6, pts: [[86, -18], [55, -19], [19, -21], [-25, -18], [-73, -13], [-149, -15], [-201, -15]] }, // main road
     { surf: 'gravel', w: 5, pts: [[-201, -15], [-211, 17], [-218, 66], [-223, 119]] },                          // west road
-    { surf: 'gravel', w: 5, pts: [[-73, -13], [-89, -30], [-102, -48]] },                                        // barn lot connector
-    { surf: 'dirt', w: 4, pts: [[23, -21], [18, -56], [21, -86], [26, -112], [26, -150], [26, -200], [30, -230]] }, // north track (crosses Pine Run)
+    { surf: 'gravel', w: 5, pts: [[-95, -15], [-97, -30], [-104, -50]] },                                       // barn lot connector (west of the cabins)
+    { surf: 'dirt', w: 4, pts: [[23, -21], [18, -56], [21, -86], [24, -104]] }, // track up toward the pond sheds
     { surf: 'paved', w: 5, pts: [[43, 119], [45, 63], [38, 33], [30, 18]] },                                     // camp driveway
     { surf: 'paved', w: 2.5, pts: [[19, 119], [17, 69]] }                                                      // walk to farmhouse
   ];
@@ -391,9 +391,10 @@ var CAMPUSMAP = (function () {
     { x: 0, z: -2, w: 4, d: 6, h: 3, wall: 0xdde2df, roof: 0x3f8a80, type: 'gable' }
   ];
   // small camp cabins
-  [[-84, -53], [-84, -41], [-84, -31], [-84, -20], [-62, 6], [-50, 1], [-90, 8], [-80, 12]].forEach(function (c) {
+  [[-84, -53], [-84, -41], [-84, -31], [-62, 6], [-50, 1], [-90, 8], [-80, 12]].forEach(function (c) {
     BUILDINGS.push({ x: c[0], z: c[1], w: 5, d: 6, h: 3, wall: 0xd8cfbd, roof: 0x7d6a55, type: 'gable' });
   });
+  BUILDINGS.push({ x: -122, z: -32, w: 7, d: 9, h: 3.4, wall: 0xe8e0cc, roof: 0x3f8a80, type: 'gable', label: 'Pickleball Store', lc: '#ffd94f', key: 'store' });
   // farm sheds (paddocks)
   [[-172, -132], [-164, -133], [-156, -132], [-148, -131]].forEach(function (c) { BUILDINGS.push({ x: c[0], z: c[1], w: 5, d: 4, h: 2.6, wall: 0xb9b2a4, roof: 0x5e5a55, type: 'gable' }); });
 
@@ -406,15 +407,15 @@ var CAMPUSMAP = (function () {
     { t: 'Pine Run', x: -90, z: creekZ(-90), h: 12, c: '#8fe0ff' },
     { t: 'Sport Court', x: 73, z: 19, h: 12 },
     { t: 'Mini Golf', x: 96, z: -119, h: 12 },
-        { t: 'Gazebo', x: 160, z: 50, h: 12 },
+        { t: 'Gaga Pit', x: 160, z: 50, h: 9, c: '#ffb36b' },
     { t: 'Golf Driving Range', x: 68, z: -88, h: 14, c: '#c8ff8a' },
     { t: 'Archery', x: 192, z: -8, h: 12, c: '#ffb36b' },
-    { t: 'Gaga Pit', x: 177, z: 51, h: 10, c: '#ffb36b' },
+    { t: 'Big Gaga Pit', x: 177, z: 51, h: 11, c: '#ffb36b' },
     { t: 'Drop Off & Pickup', x: 97, z: 62, h: 12, c: '#ffd94f' },
     { t: 'Lunch', x: 13, z: 20, h: 12, c: '#ffd94f' },
     { t: 'Ball Field · Softball, Kickball & Baseball', x: 125, z: -54, h: 12, c: '#ffb36b' },
     { t: 'Garden', x: -6, z: 88, h: 8, c: '#8ff0a8' },
-    { t: 'Fire Circle', x: 62, z: 96, h: 8 },
+    { t: 'Apple Orchard', x: 70, z: 92, h: 10, c: '#ff8a7a' },
     { t: 'Shuffleboard & Chess', x: -98, z: 44, h: 8 },
     { t: 'Landisville Rd', x: -120, z: 121, h: 8 }
   ];
@@ -560,10 +561,6 @@ var CAMPUSMAP = (function () {
     var deck = new THREE.Mesh(new THREE.BoxGeometry(BRIDGE.half * 2, 0.3, BRIDGE.len), lamb(0x8a6440)); deck.position.set(o.x + BRIDGE.x, by - 0.1, o.z + bz); add(deck);
     [-1, 1].forEach(function (s) { var rl = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1, BRIDGE.len - 4), lamb(0x6b4a2e)); rl.position.set(o.x + BRIDGE.x + s * BRIDGE.half, by + 0.5, o.z + bz); add(rl); cb.solid(o.x + BRIDGE.x + s * BRIDGE.half - 0.25, o.x + BRIDGE.x + s * BRIDGE.half + 0.25, o.z + bz - BRIDGE.len / 2 + 2, o.z + bz + BRIDGE.len / 2 - 2, by + 1); });
     // gazebo, round pad, mini golf, sand lot posts, playground
-    var gz = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 0.3, 8), lamb(0xd8d2c4)); gz.position.set(o.x + 160, ground(160, 50) + 0.15, o.z + 50); add(gz);
-    var gr = new THREE.Mesh(new THREE.ConeGeometry(4, 2.2, 8), lamb(0x6d6a66)); gr.position.set(o.x + 160, ground(160, 50) + 3.8, o.z + 50); add(gr);
-    for (var q = 0; q < 8; q++) { var a = q / 8 * Math.PI * 2; var po = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.8, 0.2), lamb(0xeeeeee)); po.position.set(o.x + 160 + Math.cos(a) * 3.1, ground(160, 50) + 1.6, o.z + 50 + Math.sin(a) * 3.1); add(po); }
-    var rp = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 0.2, 20), lamb(0xdedad0)); rp.position.set(o.x + 177, ground(177, 51) + 0.1, o.z + 51); rp.receiveShadow = true; scene.add(rp);
     var mg = tex(128, 192, function (c, w, h) { c.fillStyle = '#6b5a45'; c.fillRect(0, 0, w, h); c.fillStyle = '#4c9a63'; for (var i = 0; i < 6; i++) c.fillRect(14 + (i % 2) * 10, 12 + i * 28, 90, 14); c.beginPath(); c.arc(64, 176, 12, 0, 7); c.fill(); });
     flat(12, 20, new THREE.MeshLambertMaterial({ map: mg }), 96, -119, 0.09);
     var pl = [[0x3d7fc1, 0, -2], [0xffcf3a, 6, 4], [0xe5483b, -7, 3]];
@@ -643,8 +640,11 @@ var CAMPUSMAP = (function () {
     bx(20, 3, 0.4, 0x5a4632, AR.x, AR.z - 15, 0, 0, true);
     for (var bn = 0; bn < 3; bn++) bx(2.2, 0.45, 0.5, 0x8b6a4a, AR.x - 5 + bn * 5, AR.z + 15, 0);
 
-    // Gaga pit: low octagon wall on the round pad
-    (function () { var GX = 177, GZ = 51, R = 4.6, gy3 = ground(GX, GZ); for (var i = 0; i < 8; i++) { var a = (i + 0.5) / 8 * Math.PI * 2, side = 2 * R * Math.tan(Math.PI / 8); var m = new THREE.Mesh(new THREE.BoxGeometry(side, 0.9, 0.18), lamb(0x8a6440)); m.position.set(o.x + GX + Math.cos(a) * R, gy3 + 0.45, o.z + GZ + Math.sin(a) * R); m.rotation.y = -a + Math.PI / 2; add(m); } cb.solid(o.x + GX - R, o.x + GX + R, o.z + GZ - R, o.z + GZ + R, gy3 + 0.9); })();
+    // Gaga pits: octagon walls on sand (small one and the big one)
+    function gaga(GX, GZ, R) { var gy3 = ground(GX, GZ); var sand = new THREE.Mesh(new THREE.CircleGeometry(R, 8), lamb(0xd9c79a)); sand.rotation.x = -Math.PI / 2; sand.rotation.z = Math.PI / 8; sand.position.set(o.x + GX, gy3 + 0.1, o.z + GZ); sand.receiveShadow = true; scene.add(sand);
+      for (var i = 0; i < 8; i++) { var a = (i + 0.5) / 8 * Math.PI * 2, side = 2 * R * Math.tan(Math.PI / 8), ri = R * Math.cos(Math.PI / 8); var m = new THREE.Mesh(new THREE.BoxGeometry(side, 0.9, 0.18), lamb(0x8a6440)); m.position.set(o.x + GX + Math.cos(a) * ri, gy3 + 0.45, o.z + GZ + Math.sin(a) * ri); m.rotation.y = -a + Math.PI / 2; add(m); }
+      cb.solid(o.x + GX - R, o.x + GX + R, o.z + GZ - R, o.z + GZ + R, gy3 + 0.9); }
+    gaga(160, 50, 3.8); gaga(177, 51, 6.5);
 
     // Ball field (softball / kickball / baseball): dirt infield diamond, bases, mound and backstop
     (function () { var BX = 125, BZ = -54, D = 6.5;
@@ -671,9 +671,15 @@ var CAMPUSMAP = (function () {
     (function () { var GX = -6, GZ = 88; flat(12, 10, lamb(0x7a5a3a), GX, GZ, 0.1); for (var r2 = 0; r2 < 3; r2++) for (var c2 = 0; c2 < 2; c2++) { bx(4.2, 0.45, 1.8, 0x8b6a4a, GX - 2.6 + c2 * 5.2, GZ - 3 + r2 * 3, 0); var veg = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.35, 1.5), lamb(0x4f9a3c)); veg.position.set(o.x + GX - 2.6 + c2 * 5.2, ground(GX, GZ) + 0.6, o.z + GZ - 3 + r2 * 3); scene.add(veg); }
       [[0, -5, 12, 0.06], [0, 5, 12, 0.06], [-6, 0, 0.06, 10], [6, 0, 0.06, 10]].forEach(function (f) { var m = new THREE.Mesh(new THREE.BoxGeometry(f[2], 1.3, f[3]), chain); m.position.set(o.x + GX + f[0], ground(GX, GZ) + 0.65, o.z + GZ + f[1]); scene.add(m); }); cb.solid(o.x + GX - 6, o.x + GX + 6, o.z + GZ - 5, o.z + GZ + 5, ground(GX, GZ) + 1.3); })();
 
-    // Fire circle: stone ring with log benches
-    (function () { var FX = 62, FZ = 96; flat(9, 9, lamb(0xbdb4a2), FX, FZ, 0.09); var ring = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.3, 6, 12), lamb(0x8d8a84)); ring.rotation.x = Math.PI / 2; ring.position.set(o.x + FX, ground(FX, FZ) + 0.25, o.z + FZ); scene.add(ring);
-      for (var i = 0; i < 6; i++) { var a = i / 6 * Math.PI * 2, lg = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 2.4, 8), lamb(0x6b4a2e)); lg.rotation.z = Math.PI / 2; lg.rotation.y = -a + Math.PI / 2; lg.position.set(o.x + FX + Math.cos(a) * 3.6, ground(FX, FZ) + 0.3, o.z + FZ + Math.sin(a) * 3.6); add(lg); } })();
+    // Apple orchard: rows of apple trees between the camp driveway and the east driveway
+    (function () { var trunk = lamb(0x6b4a2e), leaf = lamb(0x4f8f3a), leaf2 = lamb(0x5c9c44), apple = lamb(0xd8322a);
+      for (var r = 0; r < 5; r++) for (var c = 0; c < 6; c++) {
+        var tx = 54 + c * 6.4 + (r % 2) * 1.5, tz = 76 + r * 7.5, gy = ground(tx, tz), s = 0.85 + ((r * 7 + c * 3) % 5) * 0.07;
+        var t = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 1.6 * s, 6), trunk); t.position.set(o.x + tx, gy + 0.8 * s, o.z + tz); add(t);
+        var cr = new THREE.Mesh(new THREE.SphereGeometry(1.9 * s, 9, 7), (r + c) % 2 ? leaf : leaf2); cr.scale.y = 0.8; cr.position.set(o.x + tx, gy + 2.6 * s, o.z + tz); add(cr);
+        for (var a = 0; a < 6; a++) { var an = a * 1.05 + r, ap = new THREE.Mesh(new THREE.SphereGeometry(0.17, 5, 4), apple); ap.position.set(o.x + tx + Math.cos(an) * 1.65 * s, gy + (2.1 + (a % 3) * 0.45) * s, o.z + tz + Math.sin(an) * 1.65 * s); scene.add(ap); }
+        cb.solid(o.x + tx - 0.4, o.x + tx + 0.4, o.z + tz - 0.4, o.z + tz + 0.4, gy + 4 * s);
+      } })();
 
     // Shuffleboard courts and the giant chess board (west of the pool)
     flat(3, 18, lamb(0xd6d1c3), -112, 32, 0.09, 0.35); flat(3, 18, lamb(0xd6d1c3), -107, 30, 0.09, 0.35);
@@ -690,7 +696,7 @@ var CAMPUSMAP = (function () {
   function treeOK(lx, lz) {
     if (isWaterArea(lx, lz)) return false;
     if (Math.abs(lz - creekZ(lx)) < 6) return false;
-    if (Math.abs(lx - BRIDGE.x) < 7 && lz < -140) return false;
+    if (Math.abs(lx - BRIDGE.x) < 9 && Math.abs(lz - creekZ(BRIDGE.x)) < 18) return false;
     for (var i = 0; i < ROADS.length; i++) { var r = ROADS[i]; for (var j = 0; j < r.pts.length - 1; j++) { var a = r.pts[j], b = r.pts[j + 1], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz, t = clamp(((lx - a[0]) * dx + (lz - a[1]) * dz) / L2, 0, 1); if (Math.hypot(lx - a[0] - dx * t, lz - a[1] - dz * t) < r.w / 2 + 4) return false; } }
     var woods = lz < -150 || (lz < -110 && (lx < -200 || lx > 110)) || lx < -228 || (lx > 175 && lz < -40) || (lz > 128);
     var yard = (lx > -100 && lx < 60 && lz > 25 && lz < 115 && Math.abs(lx - 8) > 14) || (lx > 150 && lx < 222 && lz > 60 && lz < 115);
@@ -707,11 +713,11 @@ var CAMPUSMAP = (function () {
   var SPOTS = {
     barn: { x: -156, z: -48 }, courts: { x: -52, z: -54 }, courts2: { x: 68, z: -43 }, academy: { x: 3, z: -2 }, camp: { x: 36, z: 20 },
     pool: { x: -53, z: 23 }, pond: { x: -35, z: -125 }, creek: { x: -90, z: creekZ(-90) }, farm: { x: -150, z: -120 }, house: { x: 8, z: 57 },
-    minigolf: { x: 96, z: -119 }, sand: { x: 125, z: -54 }, range: { x: 68, z: -62 }, archery: { x: 192, z: -8 }, gaga: { x: 177, z: 51 }, dropoff: { x: 104, z: 62 }, garden: { x: -6, z: 88 }, gazebo: { x: 160, z: 50 }, entrance: { x: 97, z: 112 }, bridge: { x: BRIDGE.x, z: creekZ(BRIDGE.x) }
+    minigolf: { x: 96, z: -119 }, sand: { x: 125, z: -54 }, range: { x: 68, z: -62 }, archery: { x: 192, z: -8 }, gaga: { x: 177, z: 51 }, dropoff: { x: 104, z: 62 }, garden: { x: -6, z: 88 }, orchard: { x: 70, z: 92 }, gazebo: { x: 160, z: 50 }, entrance: { x: 97, z: 112 }, bridge: { x: BRIDGE.x, z: creekZ(BRIDGE.x) }
   };
 
   return { POND: POND, POOL: POOL, KIDDIE: KIDDIE, BRIDGE: BRIDGE, creekZ: creekZ, waterCarve: waterCarve, poolHeight: poolHeight, onBridge: onBridge,
-    isWaterArea: isWaterArea, pondSD: pondSD, build: build, treeOK: treeOK, inside: inside, roadAt: roadAt, ROADS: ROADS, SPOTS: SPOTS, smooth: smooth };
+    isWaterArea: isWaterArea, pondSD: pondSD, LABELS: LABELS, BUILDINGS: BUILDINGS, build: build, treeOK: treeOK, inside: inside, roadAt: roadAt, ROADS: ROADS, SPOTS: SPOTS, smooth: smooth };
 })();
 
 </script>
@@ -1848,7 +1854,7 @@ var TOUR_STOPS = [
   { x: CAMPUS.x - 260, y: g0 + 45, z: CAMPUS.z + 120, title: 'Landisville Road', text: 'Camp Curiosity sits on a 55-acre farm right off Landisville Road. That’s it ahead!' },
   { x: ac0.x - 10, y: g0 + 32, z: ac0.z + 30, title: 'Curiosity Academy', text: 'The preschool and Toddler Center. The Curiosity story goes back to 1965, when Ellen Thomas cared for the neighborhood kids.' },
   { x: po0.x + 10, y: g0 + 30, z: po0.z + 25, title: 'Camp Curiosity', text: 'Summer camp! The lap pool and splash pool, lunch by the camp building, the garden and big open fields — in the summer the staff grows to about 75.' },
-  { x: CAMP.gaga.x + 5, y: g0 + 30, z: CAMP.gaga.z - 30, title: 'Archery, Gaga & the Fields', text: 'Drop off & pickup by the bus, the gaga pit, archery range, soccer goals and the softball, kickball & baseball field — the Merit Program in action.' },
+  { x: CAMP.gaga.x + 5, y: g0 + 30, z: CAMP.gaga.z - 30, title: 'Archery, Gaga & the Fields', text: 'Drop off & pickup by the bus, two gaga pits, the archery range, soccer goals and the softball, kickball & baseball field — the Merit Program in action.' },
   { x: CAMP.range.x, y: g0 + 30, z: CAMP.range.z + 10, title: 'Golf Driving Range', text: 'Hitting mats under the shade line and yardage flags out past courts 13–16 — putting, chipping and driving merits.' },
   { x: pd0.x, y: g0 + 30, z: pd0.z + 30, title: 'The Pond', text: 'The camp pond with its dock, and Pine Run creek winding through the woods just beyond it.' },
   { x: fr0.x + 10, y: g0 + 32, z: fr0.z + 30, title: 'The Farm', text: 'Paddocks and farm sheds — Camp Curiosity is a camp, a school and a farm.' },
