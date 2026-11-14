@@ -402,7 +402,7 @@ var CAMPUSMAP = (function () {
 
   // ---- buildings: x, z, w, d, h, wall, roof, roofType, rot ----
   var BUILDINGS = [
-    { x: -156, z: -48, w: 41, d: 20, h: 7, wall: 0xf1eee6, roof: 0x6e5a48, type: 'gable', label: 'Pickle Barn · Indoor Courts 1–5', lc: '#ffd94f', key: 'barn' },
+    { x: -156, z: -48, w: 41, d: 20, h: 7, wall: 0xf1eee6, roof: 0x6e5a48, type: 'gable', label: 'PICKLEBARN', lc: '#ffd94f', key: 'barn' },
     { x: 36, z: 20, w: 18, d: 12, h: 7.5, wall: 0xe9e2d2, roof: 0x7a6650, type: 'gable', label: 'Camp Curiosity', lc: '#8ff0a8', key: 'camp' },
     { x: 13, z: 20, w: 13, d: 9, h: 4.5, wall: 0xe6dfcf, roof: 0x7d5e44, type: 'gable' },
     { x: -11, z: 30, w: 14, d: 13, h: 5, wall: 0xdfe3e0, roof: 0x3f8a80, type: 'gable' },
@@ -439,7 +439,7 @@ var CAMPUSMAP = (function () {
     { t: 'Big Gaga Pit', x: 177, z: 51, h: 11, c: '#ffb36b' },
     { t: 'Drop Off & Pickup', x: 97, z: 62, h: 12, c: '#ffd94f' },
     { t: 'Lunch', x: 13, z: 20, h: 12, c: '#ffd94f' },
-    { t: 'Ball Field · Softball, Kickball & Baseball', x: 125, z: -54, h: 12, c: '#ffb36b' },
+    { t: 'KICKBALL FIELD', x: 125, z: -54, h: 12, c: '#ffb36b' },
     { t: 'Garden', x: -6, z: 88, h: 8, c: '#8ff0a8' },
     { t: 'Apple Orchard', x: 70, z: 92, h: 10, c: '#ff8a7a' },
     { t: 'Shuffleboard & Chess', x: -98, z: 44, h: 8 },
@@ -1128,14 +1128,16 @@ function roadDist(x, z) {
 // ---------------- Labels ----------------
 var labels = [];
 function label(text, x, y, z, color) {
-  var t = canvasTex(512, 96, function (c, w, h) {
+  var mc = document.createElement('canvas').getContext('2d'); mc.font = '700 44px -apple-system, Segoe UI, Arial, sans-serif';
+  var W = Math.max(256, Math.ceil((mc.measureText(text).width + 56) / 32) * 32);
+  var t = canvasTex(W, 96, function (c, w, h) {
     c.font = '700 44px -apple-system, Segoe UI, Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     var tw = c.measureText(text).width + 40; c.fillStyle = 'rgba(10,25,40,.72)';
     var x0 = (w - tw) / 2; c.beginPath(); c.moveTo(x0 + 20, 8); c.arcTo(x0 + tw, 8, x0 + tw, h - 8, 20); c.arcTo(x0 + tw, h - 8, x0, h - 8, 20); c.arcTo(x0, h - 8, x0, 8, 20); c.arcTo(x0, 8, x0 + tw, 8, 20); c.fill();
     c.fillStyle = color || '#ffffff'; c.fillText(text, w / 2, h / 2 + 2);
   });
-  var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthWrite: false, transparent: true }));
-  s.position.set(x, y, z); s.scale.set(48, 9, 1); scene.add(s); labels.push(s); return s;
+  var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthWrite: false, transparent: true })); s.userData.asp = W / 96;
+  s.position.set(x, y, z); s.scale.set(9 * W / 96, 9, 1); scene.add(s); labels.push(s); return s;
 }
 
 // ---------------- Airport ----------------
@@ -2002,12 +2004,12 @@ var TOUR_STOPS = [
   { x: CAMPUS.x - 260, y: g0 + 45, z: CAMPUS.z + 120, title: 'Landisville Road', text: 'Camp Curiosity sits on a 55-acre farm right off Landisville Road. That’s it ahead!' },
   { x: ac0.x - 10, y: g0 + 32, z: ac0.z + 30, title: 'Curiosity Academy', text: 'The preschool and Toddler Center. The Curiosity story goes back to 1965, when Ellen Thomas cared for the neighborhood kids.' },
   { x: po0.x + 10, y: g0 + 30, z: po0.z + 25, title: 'Camp Curiosity', text: 'Summer camp! The lap pool and splash pool, lunch by the camp building, the garden and big open fields — in the summer the staff grows to about 75.' },
-  { x: CAMP.gaga.x + 5, y: g0 + 30, z: CAMP.gaga.z - 30, title: 'Archery, Gaga & the Fields', text: 'Drop off & pickup by the bus, two gaga pits, the archery range, soccer goals and the softball, kickball & baseball field — the Merit Program in action.' },
+  { x: CAMP.gaga.x + 5, y: g0 + 30, z: CAMP.gaga.z - 30, title: 'Archery, Gaga & the Fields', text: 'Drop off & pickup by the bus, two gaga pits, the archery range, soccer goals and the kickball field — the Merit Program in action.' },
   { x: CAMP.range.x, y: g0 + 30, z: CAMP.range.z + 10, title: 'Golf Driving Range', text: 'Hitting mats under the shade line and yardage flags out past courts 13–16 — putting, chipping and driving merits.' },
   { x: pd0.x, y: g0 + 30, z: pd0.z + 30, title: 'The Pond', text: 'The camp pond with its dock, and Pine Run creek winding through the woods just beyond it.' },
   { x: fr0.x + 10, y: g0 + 32, z: fr0.z + 30, title: 'The Farm', text: 'Paddocks and farm sheds — Camp Curiosity is a camp, a school and a farm.' },
   { x: oc0.x, y: g0 + 30, z: oc0.z - 30, title: 'Doylestown Pickleball', text: 'Courts 1–12 here, courts 13–16 across the lot, plus 5 indoor courts in the Pickle Barn — 21 courts in all.' },
-  { x: pb0.x - 20, y: g0 + 28, z: pb0.z + 10, title: 'The Pickle Barn', text: 'Indoor courts 1–5 live in the big red barn. Lessons, clinics, leagues and Luck of the Draw.' },
+  { x: pb0.x - 20, y: g0 + 28, z: pb0.z + 10, title: 'The Pickle Barn', text: 'Indoor courts 1–5 live in the PickleBarn. Lessons, clinics, leagues and Luck of the Draw.' },
   { x: CAMPUS.x, y: g0 + 80, z: CAMPUS.z + 230, title: 'The whole campus', text: 'Camp Curiosity, Curiosity Academy and Doylestown Pickleball — all on one campus. Time to head home.' },
   { x: RB.x, y: RWY.h + 32, z: RB.z, title: 'Final approach', text: 'Line up with runway 23, ease the throttle back and gently land on the runway.', look: { x: RF.x, y: RWY.h + 20, z: RF.z } }
 ];
@@ -2114,6 +2116,7 @@ function buildMenu() {
   if (t.heli) help = '<li><b>Left stick ↕</b> collective (lift) — about halfway hovers · <b>↔</b> spin left/right</li><li><b>Right stick</b> tilts the helicopter to fly in that direction</li>';
   else if (t.ch === 3) help = '<li><b>Left stick ↕</b> throttle (stays put like a real transmitter)</li><li><b>Right stick ↔</b> turn (differential motors) · <b>↕</b> elevator</li>';
   else help = '<li><b>Left stick ↕</b> throttle (stays put) · <b>↔</b> rudder / steer on the ground</li><li><b>Right stick ↔</b> ailerons (roll) · <b>↕</b> elevator</li>';
+  if (!t.ground) help += '<li>Keyboard: <b>arrow keys</b> only — <b>↑ / ↓</b> throttle' + (t.heli ? ' (lift)' : ' (more throttle climbs, less descends)') + ' · <b>← / →</b> steer' + (TOUR ? '' : ' · <b>F</b> guns · <b>R</b> rockets') + '</li>';
   if (t.ground) help = '<li><b>Drive:</b> arrow keys — <b>↑</b> gas · <b>↓</b> brake' + (game.real ? '' : ' (hold to back up)') + ' · <b>← →</b> steer · <b>H</b> horn</li><li>Touch: slide the <b>steer pad</b>, hold <b>GAS</b> and <b>BRAKE</b>, tap <b>Horn</b>.</li>' + (game.real ? '<li><b>Realistic:</b> ' + (game.plane === 'tank' ? 'the tank is heavy — it takes time to get moving and stop, turns slowly on the move and pivots when stopped; hold ↓ when stopped to back up.' : 'start in <b>N</b> — press <b>Shift</b> (or ▲) for 1st and shift up as it revs, <b>Ctrl</b> (or ▼) to shift down; go below 1st for <b>R</b>everse. ' + (game.plane === 'moto' ? 'The bike leans into turns, so start the turn early.' : 'Corner too fast and the tyres slide wide.')) + '</li>' : '<li><b>Easy:</b> automatic — just gas, brake and steer. Turn on <b>Realistic driving</b> below for gears, grip and momentum.</li>') + '<li>Cars and motorcycles are fastest on the roads. Drive to downtown, the Shrine, the airport, Camp Curiosity or New Hope.</li>';
   if (t.tilt) help += '<li>Tap <b>VTOL ⇄ Plane</b> to tilt the rotors. Hover mode works like the helicopter.</li>';
   if (!TOUR && game.weapons && W && (W.gun || W.alt)) help += '<li>Hold <b>FIRE</b> (keyboard <b>F</b>) for guns' + (W.alt ? ', and <b>' + ALT_LABEL[W.alt.kind] + '</b> (keyboard <b>R</b>) for the cannon, rockets, bombs or missiles' : '') + '. Targets are at the Target Range, on Lake Galena and in the sky.</li>';
@@ -2183,7 +2186,7 @@ function syncBtns() {
 var stickL = $('stickL'), stickR = $('stickR'), touched = 0;
 function setupStick(el, side) {
   var id = null, sx = 0, sy = 0, s0 = 0;
-  el.addEventListener('pointerdown', function (e) { e.preventDefault(); initAudio(); id = e.pointerId; try { el.setPointerCapture(id); } catch (er) {} sx = e.clientX; sy = e.clientY; s0 = input.thr; takeover(); });
+  el.addEventListener('pointerdown', function (e) { e.preventDefault(); initAudio(); game.kb = false; id = e.pointerId; try { el.setPointerCapture(id); } catch (er) {} sx = e.clientX; sy = e.clientY; s0 = input.thr; takeover(); });
   el.addEventListener('pointermove', function (e) {
     if (e.pointerId !== id) return;
     var R = el.clientWidth * 0.4, dx = (e.clientX - sx) / R, dy = (e.clientY - sy) / R;
@@ -2309,11 +2312,27 @@ function update(dt) {
       var ap = autopilot(); thr = ap.thr; steer = ap.steer; elev = ap.elev; rud = ap.rud; input.thr = thr;
     } else {
       var k = input.keys;
-      if (k.w || (k.shift && !T[S.type].ground)) input.thr = clamp(input.thr + dt * 0.6, 0, 1);
-      if (k.s || k.control) input.thr = clamp(input.thr - dt * 0.6, 0, 1);
       var kx = (k.arrowright ? 1 : 0) - (k.arrowleft ? 1 : 0), ky = (k.arrowup ? 1 : 0) - (k.arrowdown ? 1 : 0), kr = (k.d ? 1 : 0) - (k.a ? 1 : 0);
       if (kx || ky || kr || k.w || k.s) drawSticks();
-      steer = kx || expo(input.rx); var es = ky ? -ky : expo(input.ry); elev = game.rc ? es : -es; rud = kr || expo(input.lx); thr = input.thr;
+      steer = expo(input.rx); var es = expo(input.ry); elev = game.rc ? es : -es; rud = kr || expo(input.lx); thr = input.thr;
+      if (kx || ky || game.kb) {
+        // keyboard: arrow keys only — up/down = throttle, left/right = steer; pitch is automatic (more throttle climbs, less descends)
+        game.kb = true;
+        var hovK = Tt.heli || (Tt.tilt && S.vtol);
+        if (hovK) { if (ky || !S.onSurface) { input.thr = clamp(input.thr + ((ky * 4 - S.vel.y) * 0.3 + ky * 0.4) * dt, 0, 1); drawSticks(); } }   // heli: up/down = climb/descend, let go = hover
+        else if (ky) { input.thr = clamp(input.thr + ky * dt * 0.5, 0, 1); drawSticks(); }
+        thr = input.thr;
+        tmpF.set(0, 0, 1).applyQuaternion(S.q); var pitch = Math.asin(clamp(tmpF.y, -1, 1));
+        if (Tt.heli || (Tt.tilt && S.vtol)) {
+          rud = kx * 0.9; steer = 0;
+          var aglK = S.pos.y - G(S.pos.x, S.pos.z);
+          elev = aglK > 5 ? -0.32 * (game.rc ? 1 : -1) * (game.rc ? 1 : -1) : 0;   // gentle forward cruise once off the ground
+        } else {
+          steer = kx; rud = kx * 0.5;
+          var pt = S.onSurface ? (thr > 0.6 && S.vel.length() > Tt.thrust * 1.1 ? 0.18 : 0) : (thr - 0.5) * 0.75;
+          elev = clamp((pt - pitch) * 2.6 - (S.onSurface ? 0 : 0), -0.6, 0.6);
+        }
+      }
     }
     var sm = Math.min(1, dt * 12);
     S.throttle = thr;
@@ -2462,7 +2481,7 @@ function render(dt) {
   shadow.position.set(S.pos.x, gH + 0.08, S.pos.z); shadow.material.opacity = hgt < 60 ? 0 : clamp(0.32 - hgt * 0.004, 0, 0.25); shadow.scale.setScalar(sc * (0.8 + hgt * 0.01));
   pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true;
   updateCamera(dt); updateMarkers(); updateAudio();
-  labels.forEach(function (l) { var d = l.position.distanceTo(camera.position); l.visible = d < 1400 && d > 45; var s = clamp(d / 22, 14, 60); l.scale.set(s * 5.3, s, 1); });
+  labels.forEach(function (l) { var d = l.position.distanceTo(camera.position); l.visible = d < 1400 && d > 45; var s = clamp(d / 22, 14, 60); l.scale.set(s * l.userData.asp, s, 1); });
   sky.position.copy(camera.position);
   renderer.render(scene, camera);
 }
