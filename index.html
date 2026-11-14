@@ -127,6 +127,30 @@
     #bFire { width: 60px; height: 60px; font-size: 13px; right: calc(env(safe-area-inset-right) + 134px); bottom: calc(env(safe-area-inset-bottom) + 14px); }
     #bAlt { padding: 6px 9px; font-size: 11px; right: calc(env(safe-area-inset-right) + 134px); bottom: calc(env(safe-area-inset-bottom) + 82px); }
   }
+  #wheel { position: fixed; z-index: 6; left: calc(env(safe-area-inset-left) + 18px); bottom: calc(env(safe-area-inset-bottom) + 18px); width: 230px; height: 120px; border-radius: 60px;
+    background: rgba(15,20,28,.55); border: 2px solid var(--line); touch-action: none; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; letter-spacing: .06em; color: #fff; }
+  #wheel::before { content: "◀  STEER  ▶"; opacity: .8; }
+  .pedal { position: fixed; z-index: 6; bottom: calc(env(safe-area-inset-bottom) + 18px); border: 2px solid rgba(255,255,255,.35); color: #fff; font-weight: 800; font-size: 16px; border-radius: 18px; touch-action: none; }
+  #bGas { right: calc(env(safe-area-inset-right) + 18px); width: 96px; height: 150px; background: linear-gradient(#4fd17d, #1f8f4a); }
+  #bBrake { right: calc(env(safe-area-inset-right) + 126px); width: 96px; height: 96px; background: linear-gradient(#ff7a6a, #c4241a); }
+  #bHorn { right: calc(env(safe-area-inset-right) + 126px); bottom: calc(env(safe-area-inset-bottom) + 126px); width: 96px; height: 42px; background: rgba(40,40,46,.8); font-size: 14px; }
+  .pedal.down { filter: brightness(1.35); transform: scale(.96); }
+  #gbox { position: fixed; z-index: 6; right: calc(env(safe-area-inset-right) + 234px); bottom: calc(env(safe-area-inset-bottom) + 18px); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; background: rgba(15,20,28,.6); border: 2px solid var(--line); border-radius: 16px; }
+  #gbox button { width: 56px; height: 40px; border: none; border-radius: 10px; background: #cf9f2b; color: #111; font-weight: 800; font-size: 18px; touch-action: none; }
+  #gbox b { font-size: 24px; color: #ffd94f; } #gbox small { font-size: 9px; opacity: .7; letter-spacing: .08em; }
+  body.ground .stick { display: none; }
+  body.ground #bFire { right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 182px); width: 80px; height: 80px; }
+  body.ground #bAlt { right: calc(env(safe-area-inset-right) + 110px); bottom: calc(env(safe-area-inset-bottom) + 182px); }
+  @media (max-width: 600px), (max-height: 500px) {
+    #wheel { width: 150px; height: 78px; border-radius: 40px; left: calc(env(safe-area-inset-left) + 10px); bottom: calc(env(safe-area-inset-bottom) + 10px); font-size: 10px; }
+    .pedal { border-radius: 12px; font-size: 12px; bottom: calc(env(safe-area-inset-bottom) + 10px); }
+    #bGas { width: 62px; height: 98px; right: calc(env(safe-area-inset-right) + 10px); }
+    #bBrake { width: 62px; height: 62px; right: calc(env(safe-area-inset-right) + 80px); }
+    #bHorn { width: 62px; height: 30px; font-size: 11px; right: calc(env(safe-area-inset-right) + 80px); bottom: calc(env(safe-area-inset-bottom) + 80px); }
+    #gbox { right: calc(env(safe-area-inset-right) + 150px); bottom: calc(env(safe-area-inset-bottom) + 10px); padding: 5px; gap: 3px; } #gbox button { width: 40px; height: 28px; font-size: 14px; } #gbox b { font-size: 17px; }
+    body.ground #bFire { right: calc(env(safe-area-inset-right) + 10px); bottom: calc(env(safe-area-inset-bottom) + 118px); width: 56px; height: 56px; }
+    body.ground #bAlt { right: calc(env(safe-area-inset-right) + 74px); bottom: calc(env(safe-area-inset-bottom) + 118px); }
+  }
 </style>
 </head>
 <body>
@@ -154,6 +178,8 @@
 <div id="card"><b id="cardT"></b><span id="cardB"></span></div>
 <button class="fbtn" id="bAlt" style="display:none">🚀 Rockets</button>
 <button class="fbtn" id="bFire" style="display:none">FIRE</button>
+<div id="drvUI" style="display:none"><div id="wheel"></div><button class="pedal" id="bHorn">📯 Horn</button><button class="pedal" id="bBrake">BRAKE<br>REV</button><button class="pedal" id="bGas">GAS</button>
+  <div id="gbox"><small>SHIFT</small><button id="bGUp">▲</button><b id="gearBadge">1</b><button id="bGDn">▼</button></div></div>
 <div id="stickL" class="stick"><label id="lblL">THROTTLE</label><div id="thrBar"><i></i></div><div class="cross"></div><div class="knob"></div></div>
 <div id="stickR" class="stick"><label id="lblR">TURN · ELEVATOR</label><div class="cross"></div><div class="knob"></div></div>
 
@@ -168,7 +194,7 @@
     <h3>Settings</h3>
     <div class="toggles">
       <button class="tog on" id="tGyro"><i></i><span>Gyro stabilizer<small>Levels the wings for you — great for learning</small></span></button>
-      <button class="tog" id="tAuto"><i></i><span>Autopilot tour<small>The plane flies the whole tour for you</small></span></button><button class="tog on" id="tRc"><i></i><span>Real RC elevator<small>Pull stick down to climb, push up to dive</small></span></button>
+      <button class="tog" id="tAuto"><i></i><span>Autopilot tour<small>The plane flies the whole tour for you</small></span></button><button class="tog" id="tReal"><i></i><span>Realistic driving<small>Tanks, cars &amp; motorcycles: manual gears (Shift ▲ / Ctrl ▼), real grip &amp; momentum</small></span></button><button class="tog on" id="tRc"><i></i><span>Real RC elevator<small>Pull stick down to climb, push up to dive</small></span></button>
     </div>
     <h3>How to fly</h3>
     <ul class="help" id="helpList"></ul>
@@ -746,6 +772,7 @@ var PHYS = (function () {
   var APRON = rwyPoint(-40, -75);
   var PILOT = rwyPoint(-RWY.len / 2 + 40, -32); PILOT.y = RWY.h + 1.7;
 
+  function riverX(z) { return 2950 + 70 * Math.sin(z / 420) + 25 * Math.sin(z / 150); }
   function terrainH(x, z) {
     var h = 6 + 3 * Math.sin(x * 0.004 + 1) * Math.cos(z * 0.0035) + 1.5 * Math.sin(x * 0.011 + z * 0.007) +
       0.8 * Math.sin(x * 0.03) * Math.cos(z * 0.027);
@@ -760,8 +787,11 @@ var PHYS = (function () {
       var F = FLATS[f], cw = 1 - smooth(F.r, F.r + 60, Math.hypot(x - F.x, z - F.z));
       h = h * (1 - cw) + F.h * cw;
     }
-    var far = Math.hypot(x + 300, z + 700);
-    h += Math.pow(Math.max(0, far - 2300), 1.1) * 0.06;
+    var far = Math.hypot((x - 300) * 0.78, z + 700);
+    h += Math.pow(Math.max(0, far - 2150), 1.1) * 0.06;
+    // Delaware River at New Hope (and a little valley down to it)
+    var rd = Math.abs(x - riverX(z));
+    if (rd < 260) { var tv = smooth(60, 250, rd), base = rd < 45 ? -3.5 : rd < 62 ? -3.5 + 4.3 * (rd - 45) / 17 : 0.8; h = h * tv + base * (1 - tv); }
     return h;
   }
 
@@ -923,7 +953,7 @@ var PHYS = (function () {
     return ev;
   }
 
-  return { clamp: clamp, smooth: smooth, terrainH: terrainH, RWY: RWY, LAKE: LAKE, CAMPUS: CAMPUS, PCSU: PCSU, PCSL: PCSL, APRON: APRON, PILOT: PILOT,
+  return { clamp: clamp, smooth: smooth, terrainH: terrainH, riverX: riverX, RWY: RWY, LAKE: LAKE, CAMPUS: CAMPUS, PCSU: PCSU, PCSL: PCSL, APRON: APRON, PILOT: PILOT,
     rwyPoint: rwyPoint, rwyLocal: rwyLocal, TYPES: TYPES, newState: newState, step: step };
 })();
 if (typeof module !== 'undefined') module.exports = PHYS;
@@ -1015,7 +1045,7 @@ function hangar(x, z, w, d, rot, col) {
 // ---------------- Terrain ----------------
 var FIELD_COLS = ['#6aa043', '#88b04b', '#c9b25a', '#a58b4f', '#5e9a3a', '#7fae52', '#9bb65a'].map(function (c) { return new THREE.Color(c); });
 (function buildTerrain() {
-  var SIZE = 4400, SEG = 240, CX = -300, CZ = -300;
+  var SIZE = 5900, SEG = 300, CX = 450, CZ = -300;
   var g = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG); g.rotateX(-Math.PI / 2); g.translate(CX, 0, CZ);
   var pos = g.attributes.position, cols = new Float32Array(pos.count * 3), c = new THREE.Color();
   var sand = new THREE.Color(0xc9b98a), mud = new THREE.Color(0x6d6a4c), lawn = new THREE.Color(0x6fa548), lawn2 = new THREE.Color(0x5d9440);
@@ -1060,6 +1090,15 @@ var ROADS = [
 ];
 [-320, -160, 160, 320].forEach(function (x) { ROADS.push({ w: 7, pts: [[x, -400], [x, 400]] }); });
 [-240, -120, 120, 240].forEach(function (z) { ROADS.push({ w: 7, pts: [[-400, z], [400, z]] }); });
+// Ferry Rd out to the National Shrine of Our Lady of Czestochowa (west, off Swamp Rd / 313)
+var SHRINE = { x: -1500, z: -190 };
+ROADS.push({ w: 7, pts: [[-430, -308], [-700, -290], [-1000, -230], [-1300, -205], [SHRINE.x + 30, SHRINE.z - 10]] });
+// Route 202 continues east through Buckingham & Lahaska to New Hope; Bridge St crosses the Delaware to Lambertville
+var NEWHOPE = { x: PHYS.riverX(-950) - 140, z: -950 };
+ROADS[2].pts.push([2150, -420], [2500, -760], [NEWHOPE.x - 40, NEWHOPE.z]);
+ROADS.push({ w: 9, pts: [[NEWHOPE.x - 40, NEWHOPE.z], [PHYS.riverX(-950) + 320, -950]] });                     // Bridge St
+ROADS.push({ w: 8, pts: [[NEWHOPE.x + 40, -1500], [NEWHOPE.x + 55, -1200], [NEWHOPE.x + 45, -950], [NEWHOPE.x + 30, -600], [NEWHOPE.x + 10, -350]] }); // Main St, New Hope
+var BRIDGES = [{ x0: PHYS.riverX(-950) - 75, x1: PHYS.riverX(-950) + 75, z0: -957, z1: -943 }];
 var roadMat = new THREE.MeshLambertMaterial({ color: 0x4a4d52 });
 function roadDist(x, z) {
   var best = 1e9;
@@ -1135,6 +1174,7 @@ function label(text, x, y, z, color) {
 
 // ---------------- Town of Doylestown ----------------
 var LM = {
+  shrine: { x: -1500, z: -190 }, newhope: { x: 2800, z: -950 },
   courthouse: { x: -55, z: -70 }, mercer: { x: 120, z: 160 }, fonthill: { x: 440, z: 50 }, tileworks: { x: 520, z: 140 },
   delval: { x: -720, z: 470 }, park: { x: -250, z: 640 }, hospital: { x: 300, z: -300 }
 };
@@ -1205,6 +1245,47 @@ var ROOFS = ['#4b4f57', '#5d4037', '#3e4a3d', '#6b6b6b', '#7a3b2e'];
   label('Lake Galena', LAKE.x, 30, LAKE.z, '#9fe0ff');
 })();
 
+
+// ---------------- National Shrine of Our Lady of Czestochowa · New Hope & Lambertville ----------------
+(function places() {
+  var S0 = SHRINE, gy = G(S0.x, S0.z);
+  // parking lot + main church (modern, steep roof) + tall bell tower with a cross + cemetery
+  var lot = new THREE.Mesh(new THREE.PlaneGeometry(90, 60), lam(0x55585d)); lot.rotation.x = -Math.PI / 2; lot.position.set(S0.x + 10, G(S0.x + 10, S0.z + 55) + 0.12, S0.z + 55); lot.receiveShadow = true; scene.add(lot);
+  put(UBOX, S0.x, gy + 7, S0.z, 46, 14, 34, '#e9e4d8');
+  put(UROOF, S0.x, gy + 14, S0.z, 49, 26, 37, '#3f4650', 0);
+  put(UBOX, S0.x, gy + 16, S0.z + 18.5, 22, 32, 3, '#dcd6c8');
+  put(UBOX, S0.x, gy + 15, S0.z + 20.2, 14, 26, 0.6, '#2a4e7a');   // tall glass front
+  put(UBOX, S0.x + 34, gy + 22, S0.z + 12, 6, 44, 6, '#e9e4d8'); put(UBOX, S0.x + 34, gy + 46, S0.z + 12, 0.8, 6, 0.8, '#d9b44a'); put(UBOX, S0.x + 34, gy + 47, S0.z + 12, 3.4, 0.8, 0.8, '#d9b44a');
+  solid(S0.x, S0.z, 46, 38, gy + 32); solid(S0.x + 34, S0.z + 12, 6, 6, gy + 48);
+  for (var r = 0; r < 8; r++) for (var c = 0; c < 14; c++) put(UBOX, S0.x - 60 + c * 4, G(S0.x - 60, S0.z - 50) + 0.5, S0.z - 40 - r * 4, 1.2, 1, 0.3, '#a9a9a6');
+  label('National Shrine of Our Lady of Czestochowa', S0.x, gy + 70, S0.z, '#ffe08a');
+  // New Hope: shops along Main St and the Bucks County Playhouse by the river
+  var N0 = NEWHOPE, rx = PHYS.riverX(N0.z);
+  for (var z = -1460; z <= -380; z += 22) {
+    if (Math.abs(z - N0.z) < 18) continue;
+    var MS = [[-1500, 40], [-1200, 55], [-950, 45], [-600, 30], [-350, 10]], mx = N0.x + 10; for (var q = 0; q < MS.length - 1; q++) if (z >= MS[q][0] && z <= MS[q + 1][0]) mx = N0.x + MS[q][1] + (MS[q + 1][1] - MS[q][1]) * (z - MS[q][0]) / (MS[q + 1][0] - MS[q][0]);
+    house(mx - 16, z, 11, 16, 7 + rnd() * 4, WALLS[Math.floor(rnd() * WALLS.length)], ROOFS[Math.floor(rnd() * ROOFS.length)], 0);
+    if (mx + 16 < PHYS.riverX(z) - 70) house(mx + 16, z, 11, 16, 7 + rnd() * 3, WALLS[Math.floor(rnd() * WALLS.length)], ROOFS[Math.floor(rnd() * ROOFS.length)], 0);
+  }
+  for (var hx = N0.x - 70; hx > N0.x - 260; hx -= 26) for (var hz = -1300; hz <= -600; hz += 30) if (Math.abs(hz - N0.z) > 16 && rnd() < 0.7) house(hx, hz, 9, 11, 6 + rnd() * 2, WALLS[Math.floor(rnd() * WALLS.length)], ROOFS[Math.floor(rnd() * ROOFS.length)], Math.PI / 2);
+  house(rx - 80, N0.z - 40, 26, 18, 10, '#8f2b24', '#3e3a36', 0);
+  label('Bucks County Playhouse', rx - 80, G(rx - 80, N0.z - 40) + 32, N0.z - 40, '#ffd94f');
+  label('New Hope', N0.x, 80, N0.z - 120, '#ffffff');
+  // Lambertville, NJ across the river
+  for (var lz = -1300; lz <= -600; lz += 24) for (var lx = rx + 110; lx < rx + 330; lx += 30) if (Math.abs(lz - N0.z) > 16 && rnd() < 0.65) house(lx, lz, 10, 12, 6 + rnd() * 3, WALLS[Math.floor(rnd() * WALLS.length)], ROOFS[Math.floor(rnd() * ROOFS.length)], Math.PI / 2);
+  label('Lambertville, NJ', rx + 220, 70, N0.z - 150, '#ffffff');
+  label('Delaware River', rx, 30, N0.z + 260, '#9fe0ff');
+  // river water + the New Hope–Lambertville bridge
+  var rv = new THREE.Mesh(new THREE.PlaneGeometry(220, 5600, 1, 60), new THREE.MeshPhongMaterial({ map: waterTex, transparent: true, opacity: 0.88, shininess: 110, specular: 0x8fb7d8 }));
+  rv.rotation.x = -Math.PI / 2; var rp = rv.geometry.attributes.position;
+  for (var i = 0; i < rp.count; i++) { var vz = -rp.getY(i) - 300; rp.setX(i, rp.getX(i) + PHYS.riverX(vz) - 2950); }
+  rv.position.set(2950, 0, -300); scene.add(rv);
+  var B = BRIDGES[0], bl = B.x1 - B.x0, bx = (B.x0 + B.x1) / 2;
+  put(UBOX, bx, 1.1, -950, bl, 0.6, 12, '#7d7a72');
+  [-6.3, 6.3].forEach(function (o) { put(UBOX, bx, 2, -950 + o, bl, 1.2, 0.4, '#5a5a5a'); });
+  for (var pi = 0; pi < 5; pi++) put(UBOX, B.x0 + 15 + pi * (bl - 30) / 4, -2, -950, 3, 6, 10, '#8a8478');
+})();
+
 // ---------------- Campus: Camp Curiosity · Curiosity Academy · Doylestown Pickleball ----------------
 var CM = CAMPUSMAP, CAMP = {};
 (function campus() {
@@ -1224,12 +1305,12 @@ scene.add(MG.build());
 // ---------------- Trees ----------------
 var trees = [];
 (function () {
-  var N = 1400, F = GFX.forest(scene, N);
+  var N = 1900, F = GFX.forest(scene, N);
   var m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new V3(), n = 0, tries = 0;
   while (n < N && tries < 30000) {
     tries++;
     var cluster = rnd() < 0.7;
-    var nearC = rnd() < 0.3, x = nearC ? CAMPUS.x - 245 + rnd() * 490 : -2000 + rnd() * 3400, z = nearC ? CAMPUS.z - 260 + rnd() * 395 : -2000 + rnd() * 3000, h = H(x, z);
+    var nearC = rnd() < 0.3, x = nearC ? CAMPUS.x - 245 + rnd() * 490 : -2200 + rnd() * 5400, z = nearC ? CAMPUS.z - 260 + rnd() * 395 : -2000 + rnd() * 3000, h = H(x, z);
     if (h < 1) continue;
     var rl = PHYS.rwyLocal(x, z);
     if (Math.abs(rl.u) < RWY.len / 2 + 120 && rl.v > -180 && rl.v < 60) continue;
@@ -1523,7 +1604,51 @@ function buildCivHeli() {
 }
 var BUILDERS = { trainer: buildTrainer, seaplane: buildSeaplane, warbird: buildWarbird, jet: buildJet, a10: buildA10, b2: buildB2, heli: buildHeli, osprey: buildOsprey, af1: buildAF1 };
 if (TOUR) { T.heli.name = 'Curiosity Helicopter'; T.heli.sub = 'Hover, spin and fly anywhere over campus'; }
-var PLANES = TOUR ? ['trainer', 'heli'] : ['trainer', 'seaplane', 'warbird', 'jet', 'a10', 'b2', 'heli', 'osprey', 'af1'];
+
+// ---------------- Ground vehicles (Doylestown RC only) ----------------
+T.tank = { name: 'M1 Tank', sub: 'Drive it · cannon & machine gun', ch: 2, scale: 3, bottom: 0, ground: true, vmax: 13, acc: 4, wb: 0, pivot: 0.9, offroad: 1, snd: 'big' };
+T.car = { name: 'Sports Car', sub: 'Drive the roads of Doylestown', ch: 2, scale: 2, bottom: 0, ground: true, vmax: 34, acc: 8, wb: 1.35, offroad: 0.55, snd: 'prop' };
+T.moto = { name: 'Motorcycle', sub: 'Lean into the turns', ch: 2, scale: 1.1, bottom: 0, ground: true, vmax: 38, acc: 10, wb: 1.3, offroad: 0.6, snd: 'prop', lean: true };
+function wheelU(r, w, x, y, z, mat) { var g = new THREE.CylinderGeometry(r, r, w, 16); g.rotateZ(Math.PI / 2); var o = new THREE.Group(); o.position.set(x, y, z); o.add(mesh(g, mat || M.rubber)); var hub = new THREE.CylinderGeometry(r * 0.55, r * 0.55, w * 1.02, 8); hub.rotateZ(Math.PI / 2); o.add(mesh(hub, M.silver)); return o; }
+function buildTank() {   // 1 unit = 3 m
+  var root = new THREE.Group(), A = { props: [], wheels: [], fpv: new V3(0, 0.95, 0.4) };
+  var sand = lam(0xb8a77a), dk = lam(0x6e6448), trk = lam(0x2b2b2b);
+  root.add(box(1.0, 0.28, 2.3, sand, 0, 0.42, 0), box(1.12, 0.12, 2.1, sand, 0, 0.6, -0.05));
+  var glacis = box(1.0, 0.06, 0.45, sand, 0, 0.5, 1.2); glacis.rotation.x = -0.45; root.add(glacis);
+  [-0.5, 0.5].forEach(function (x) { root.add(box(0.26, 0.34, 2.36, trk, x, 0.2, 0)); for (var i = 0; i < 7; i++) { var w = wheelU(0.11, 0.2, x, 0.14, -0.95 + i * 0.32, dk); A.wheels.push(w); root.add(w); } });
+  var tur = new THREE.Group(); tur.position.set(0, 0.66, -0.1);
+  tur.add(box(0.82, 0.24, 1.0, sand, 0, 0.12, 0), box(0.7, 0.18, 0.4, sand, 0, 0.1, 0.62), box(0.16, 0.1, 0.16, dk, 0.2, 0.3, -0.1), box(0.06, 0.12, 0.06, M.black, -0.22, 0.32, 0.1));
+  var gun = tube(0.045, 0.04, 1.5, dk, 0, 0.13, 1.45); tur.add(gun, tube(0.07, 0.07, 0.2, dk, 0, 0.13, 0.85));
+  root.add(tur); A.turret = tur;
+  return { root: root, A: A };
+}
+function buildCar(col) {   // 1 unit = 2 m — sports car
+  var root = new THREE.Group(), A = { props: [], wheels: [], fw: [], fpv: new V3(0, 0.55, 0.1) };
+  var red = new THREE.MeshPhongMaterial({ color: col || 0xc8102e, shininess: 90, specular: 0x666666 });
+  root.add(box(0.9, 0.22, 2.2, red, 0, 0.3, 0), box(0.86, 0.06, 0.7, red, 0, 0.44, 0.72));
+  var cab = box(0.78, 0.22, 0.95, M.glass, 0, 0.52, -0.1); root.add(cab, box(0.8, 0.04, 0.7, red, 0, 0.64, -0.18));
+  root.add(box(0.2, 0.06, 0.02, lam(0xfff6c8), 0.3, 0.33, 1.105), box(0.2, 0.06, 0.02, lam(0xfff6c8), -0.3, 0.33, 1.105), box(0.22, 0.05, 0.02, M.ledR, 0.3, 0.36, -1.105), box(0.22, 0.05, 0.02, M.ledR, -0.3, 0.36, -1.105));
+  root.add(box(0.8, 0.04, 0.12, M.black, 0, 0.56, -1.05));
+  [[0.44, 0.7], [-0.44, 0.7], [0.44, -0.7], [-0.44, -0.7]].forEach(function (p, i) { var w = wheelU(0.18, 0.14, p[0], 0.18, p[1]); A.wheels.push(w); if (i < 2) A.fw.push(w); root.add(w); });
+  return { root: root, A: A };
+}
+function buildMoto() {   // 1 unit = 1.1 m — sport bike with rider
+  var root = new THREE.Group(), A = { props: [], wheels: [], fw: [], fpv: new V3(0, 1.25, 0.2) };
+  var lean = new THREE.Group(); root.add(lean); A.lean = lean;
+  var blue = new THREE.MeshPhongMaterial({ color: 0x1f5fd1, shininess: 90, specular: 0x777777 });
+  var fwG = new THREE.Group(); fwG.position.set(0, 0.3, 0.7); var fw = wheelU(0.3, 0.1, 0, 0, 0); fwG.add(fw, box(0.04, 0.5, 0.04, M.silver, 0.07, 0.22, -0.06), box(0.04, 0.5, 0.04, M.silver, -0.07, 0.22, -0.06), box(0.5, 0.04, 0.04, M.black, 0, 0.55, -0.12)); lean.add(fwG);
+  var rw = wheelU(0.3, 0.14, 0, 0.3, -0.62); lean.add(rw); A.wheels.push(fw, rw); A.fw.push(fwG); A.steerGroup = fwG;
+  lean.add(box(0.22, 0.24, 0.9, blue, 0, 0.56, 0.05), box(0.26, 0.2, 0.36, blue, 0, 0.72, 0.3), box(0.2, 0.08, 0.4, M.black, 0, 0.74, -0.2), box(0.1, 0.1, 0.5, M.silver, 0.12, 0.32, -0.35));
+  var ws = box(0.2, 0.14, 0.02, M.glass, 0, 0.88, 0.5); ws.rotation.x = -0.5; lean.add(ws);
+  // rider
+  var jk = lam(0x22252b), hm = new THREE.MeshPhongMaterial({ color: 0xf2f2f2, shininess: 80 });
+  var torso = box(0.3, 0.42, 0.22, jk, 0, 1.0, -0.05); torso.rotation.x = 0.55; lean.add(torso);
+  lean.add(mesh(new THREE.SphereGeometry(0.14, 12, 10), hm, 0, 1.25, 0.12), box(0.1, 0.1, 0.4, jk, 0.14, 0.75, -0.1), box(0.1, 0.1, 0.4, jk, -0.14, 0.75, -0.1));
+  [-1, 1].forEach(function (s) { var arm = box(0.07, 0.07, 0.42, jk, s * 0.17, 0.98, 0.26); arm.rotation.x = 0.5; lean.add(arm); });
+  return { root: root, A: A };
+}
+BUILDERS.tank = buildTank; BUILDERS.car = function () { return buildCar(); }; BUILDERS.moto = buildMoto;
+var PLANES = TOUR ? ['trainer', 'heli'] : ['trainer', 'seaplane', 'warbird', 'jet', 'a10', 'b2', 'heli', 'osprey', 'af1', 'tank', 'car', 'moto'];
 var models = {};
 if (TOUR) BUILDERS.heli = buildCivHeli;
 scene.traverse(function (o) { if (o.isMesh && !o.material.isShaderMaterial && o !== water) o.receiveShadow = true; });
@@ -1549,9 +1674,9 @@ function burst(p, n, power, col) { col = col || [0.95, 0.97, 1]; for (var i = 0;
 // ---------------- Game state ----------------
 var S = PHYS.newState();
 var game = { plane: TOUR ? 'trainer' : 'warbird', start: 'runway', gyro: true, rc: true, cam: 0, playing: false, paused: true,
-  resetT: 0, airT: 0, sound: true, lowBeepT: 0, emptyShown: false, score: 0, kills: 0, auto: false, time: 0, weapons: true };
+  resetT: 0, airT: 0, real: false, sound: true, lowBeepT: 0, emptyShown: false, score: 0, kills: 0, auto: false, time: 0, weapons: true };
 var CAMS = ['Chase', 'Pilot', 'FPV'];
-var input = { thr: 0, lx: 0, rx: 0, ry: 0, keys: {}, fire: false, alt: false };
+var input = { thr: 0, lx: 0, rx: 0, ry: 0, keys: {}, fire: false, alt: false, gas: false, brake: false, dsteer: 0 };
 var tmpV = new V3(), tmpF = new V3(), tmpU = new V3(), tmpL = new V3(), camHead = new V3(0, 0, 1), lookAt = new V3();
 
 function yawQ(yaw) { return new THREE.Quaternion().setFromAxisAngle(YAX, yaw); }
@@ -1562,7 +1687,16 @@ function spawn() {
   S.type = game.plane; S.vel.set(0, 0, 0); S.state = 'ok'; S.motor = 0; S.steer = S.elev = S.rud = 0; S.onSurface = true; S.battery = 1;
   S.vtol = !!T0.tilt && st === 'helipad';
   var p;
-  if (st === 'water') { S.pos.set(LAKE.x + 300, 0.05, LAKE.z); S.q.copy(yawQ(-Math.PI / 2)); }
+  if (T0.ground) {
+    if (['town', 'range', 'shrine', 'newhope'].indexOf(st) < 0) st = 'runway';
+    var gx, gz, gyw;
+    if (st === 'town') { gx = 3; gz = 140; gyw = Math.PI; }
+    else if (st === 'shrine') { gx = SHRINE.x + 60; gz = SHRINE.z - 8; gyw = Math.PI / 2; }
+    else if (st === 'newhope') { gx = NEWHOPE.x - 30; gz = NEWHOPE.z + 2; gyw = Math.PI / 2; }
+    else if (st === 'range') { gx = RANGE.x + 40; gz = RANGE.z + 260; gyw = Math.atan2(RANGE.x - gx, RANGE.z - gz); }
+    else { p = PHYS.rwyPoint(-RWY.len / 2 + 25, 0); gx = p.x; gz = p.z; gyw = RWY.yaw; }
+    S.gyaw = gyw; S.gspd = 0; S.leanA = 0; S.gear = 0; S.rpm = 0; $('gearBadge').textContent = 'N'; S.pos.set(gx, G(gx, gz), gz); S.q.copy(yawQ(gyw)); S.onSurface = true;
+  } else if (st === 'water') { S.pos.set(LAKE.x + 300, 0.05, LAKE.z); S.q.copy(yawQ(-Math.PI / 2)); }
   else if (st === 'helipad') { var hp = PHYS.HELIPAD; S.pos.set(hp.x, RWY.h + T0.bottom - 0.02, hp.z); S.q.copy(yawQ(RWY.yaw)); }
   else if (st === 'air') {
     S.onSurface = false; p = PHYS.rwyPoint(RWY.len / 2 + 120, 0); S.pos.set(p.x, RWY.h + 45, p.z);
@@ -1576,6 +1710,7 @@ function spawn() {
   tmpF.set(0, 0, 1).applyQuaternion(S.q); camHead.copy(tmpF).setY(0).normalize();
   camera.position.copy(S.pos).addScaledVector(camHead, -6 * T0.scale / 2).add(new V3(0, 2, 0));
   Object.keys(models).forEach(function (k) { models[k].root.visible = k === game.plane; });
+  document.body.classList.toggle('ground', !!T0.ground); $('drvUI').style.display = T0.ground ? '' : 'none'; $('gbox').style.display = T0.ground && game.real && (game.plane === 'car' || game.plane === 'moto') ? '' : 'none';
   $('planeName').textContent = T0.name.toUpperCase();
   game.emptyShown = false; game.airT = 0;
   if (TOUR) tourReset();
@@ -1618,6 +1753,7 @@ function updateAudio() {
   var m = S.state === 'ok' ? S.motor : 0, ty = S.type;
   var kind = ty === 'jet' || ty === 'af1' || ty === 'b2' || ty === 'a10' ? 'jet' : ty === 'heli' || (ty === 'osprey' && S.vtol) ? 'rotor' : ty === 'warbird' ? 'big' : ty === 'osprey' ? 'prop' : 'electric';
   if (ty === 'trainer') kind = 'prop';
+  if (T[ty] && T[ty].ground) kind = T[ty].snd;
   ENG.set(kind, m, game.sound && !game.paused && m > 0.02);
 }
 
@@ -1631,9 +1767,11 @@ var WEAP = {
   osprey: { gun: { rate: 0.08, spd: 220, dmg: 1, spread: 0.012, col: [1, 0.85, 0.3], pts: [[0, -0.1, 0.62]], down: 0.08 }, alt: { kind: 'rocket', rate: 0.35, pts: [[0.15, -0.1, 0.35], [-0.15, -0.1, 0.35]], down: 0.06 } },
   af1: { gun: null, alt: { kind: 'flare', rate: 0.12, pts: [[0.1, -0.1, -0.6], [-0.1, -0.1, -0.6]] } },
   seaplane: { gun: null, alt: { kind: 'water', rate: 0.04, pts: [[0, -0.05, 0]] } },
-  trainer: { gun: null, alt: null }
+  trainer: { gun: null, alt: null },
+  tank: { gun: { rate: 0.08, spd: 230, dmg: 1, spread: 0.01, col: [1, 0.85, 0.3], pts: [[0.2, 0.84, 0.7]] }, alt: { kind: 'shell', rate: 1.1, pts: [[0, 0.79, 2.2]] } },
+  car: { gun: null, alt: null }, moto: { gun: null, alt: null }
 };
-var ALT_LABEL = { rocket: '🚀 Rockets', missile: '🎯 Missile', bomb: '💣 Bomb', flare: '✨ Flares', water: '💧 Water drop' };
+var ALT_LABEL = { shell: '💥 Cannon', rocket: '🚀 Rockets', missile: '🎯 Missile', bomb: '💣 Bomb', flare: '✨ Flares', water: '💧 Water drop' };
 
 var targets = [], bullets = [], ords = [], flashes = [];
 var BN = 260, bPos = new Float32Array(BN * 6), bCol = new Float32Array(BN * 6);
@@ -1645,7 +1783,7 @@ var flashGeo = new THREE.SphereGeometry(1, 12, 8);
 for (var fi = 0; fi < 10; fi++) { var fm = new THREE.Mesh(flashGeo, new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0, depthWrite: false })); fm.visible = false; scene.add(fm); flashes.push({ m: fm, t: 0, r: 1 }); }
 var ordGeo = { rocket: new THREE.CylinderGeometry(0.06, 0.06, 0.9, 6), bomb: new THREE.CylinderGeometry(0.18, 0.12, 1.2, 8) };
 ordGeo.rocket.rotateX(Math.PI / 2); ordGeo.bomb.rotateX(Math.PI / 2);
-var ordMat = { rocket: lam(0xdddddd), missile: lam(0xf2f2f2), bomb: lam(0x4a4f44) };
+var ordMat = { shell: lam(0x8a6d3b), rocket: lam(0xdddddd), missile: lam(0xf2f2f2), bomb: lam(0x4a4f44) };
 for (var oi = 0; oi < 40; oi++) { var om = new THREE.Mesh(ordGeo.rocket, ordMat.rocket); om.visible = false; scene.add(om); ords.push({ on: false, m: om, kind: '', v: new V3(), life: 0, tgt: null }); }
 
 function tgtMesh(kind) {
@@ -1668,6 +1806,10 @@ function tgtMesh(kind) {
   } else if (kind === 'balloon') {
     var col = [0xe5483b, 0xffcf3a, 0x3d7fc1, 0x3ccf6e][Math.floor(rnd() * 4)];
     g.add(mesh(new THREE.SphereGeometry(1.8, 16, 12), new THREE.MeshPhongMaterial({ color: col, shininess: 80 }), 0, 0, 0), box(0.03, 6, 0.03, M.black, 0, -4.8, 0));
+  } else if (kind === 'car') {
+    var cm = buildCar([0x2a6fd6, 0xf2f2f2, 0x1d2029, 0xe8c547, 0x3c8f4f][Math.floor(rnd() * 5)]).root; cm.scale.setScalar(2); g.add(cm);
+  } else if (kind === 'moto') {
+    var mm = buildMoto().root; mm.scale.setScalar(1.1); g.add(mm);
   } else if (kind === 'drone') {
     var o = lam(0xff7a1a); g.add(tube(0.35, 0.25, 3.2, o, 0, 0, 0), box(4.2, 0.12, 0.9, o, 0, 0, 0.1), box(1.6, 0.1, 0.5, o, 0, 0, -1.4), box(0.1, 0.8, 0.6, o, 0, 0.4, -1.4));
   }
@@ -1676,7 +1818,7 @@ function tgtMesh(kind) {
 var TINFO = {
   tank: { hp: 14, r: 3.6, cy: 1.4, pts: 150, name: 'Tank' }, truck: { hp: 6, r: 3.2, cy: 1.6, pts: 100, name: 'Truck' }, bunker: { hp: 30, r: 5.5, cy: 2, pts: 300, name: 'Bunker' },
   boat: { hp: 6, r: 3.2, cy: 0.8, pts: 150, name: 'Target boat' }, barrel: { hp: 1, r: 1.2, cy: 0.3, pts: 25, name: 'Barrel' },
-  balloon: { hp: 1, r: 2.2, cy: 0, pts: 50, name: 'Balloon' }, drone: { hp: 3, r: 2.6, cy: 0, pts: 200, name: 'Target drone' }
+  balloon: { hp: 1, r: 2.2, cy: 0, pts: 50, name: 'Balloon' }, car: { hp: 4, r: 2.4, cy: 0.8, pts: 80, name: 'Car' }, moto: { hp: 2, r: 1.6, cy: 0.8, pts: 120, name: 'Motorcycle' }, drone: { hp: 3, r: 2.6, cy: 0, pts: 200, name: 'Target drone' }
 };
 var RANGE = { x: -520, z: -1260 }, rangeDecor = [];
 function addTarget(kind, x, z, extra) {
@@ -1706,6 +1848,12 @@ if (!TOUR) {
   for (var br = 0; br < 7; br++) addTarget('barrel', LAKE.x - 220 + br * 70, LAKE.z + (br % 2 ? 40 : -40));
   for (var bl = 0; bl < 10; bl++) { var ang = bl * 0.63, rr = 120 + (bl % 3) * 70; addTarget('balloon', RANGE.x + Math.cos(ang) * rr, RANGE.z + Math.sin(ang) * rr, { h: 30 + (bl % 4) * 18 }); }
   for (var lb = 0; lb < 4; lb++) addTarget('balloon', LAKE.x - 150 + lb * 100, LAKE.z - 90 + lb * 20, { h: 25 + lb * 10 });
+  function roadPath(pts) { var cum = [0]; for (var i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts: pts, cum: cum, len: cum[cum.length - 1] }; }
+  var RP = [roadPath(ROADS[0].pts), roadPath(ROADS[1].pts), roadPath(ROADS[2].pts), roadPath(ROADS[3].pts), roadPath(ROADS[4].pts)];
+  [[0, 0], [0, 600], [1, 100], [1, 900], [2, 300], [2, 1500], [3, 200], [4, 400]].forEach(function (c, i) { addTarget('car', 0, 0, { road: RP[c[0]], s0: c[1], spd: 9 + (i % 3) * 2.5, lane: 2.6 }); });
+  [[0, 300], [1, 500], [2, 900], [4, 100]].forEach(function (c, i) { addTarget('moto', 0, 0, { road: RP[c[0]], s0: c[1], spd: 14 + i * 1.5, lane: 1.6 }); });
+  var loop = roadPath([[RANGE.x - 160, RANGE.z - 120], [RANGE.x + 160, RANGE.z - 120], [RANGE.x + 160, RANGE.z + 160], [RANGE.x - 160, RANGE.z + 160], [RANGE.x - 160, RANGE.z - 120]]);
+  [0, 560].forEach(function (s0) { addTarget('tank', 0, 0, { road: loop, s0: s0, spd: 5, lane: 0 }); });
   addTarget('drone', 0, 0, { cx: RANGE.x, cz: RANGE.z, r: 220, h: 70, spd: 16 });
   addTarget('drone', 0, 0, { cx: LAKE.x, cz: LAKE.z, r: 260, h: 55, spd: 14 });
   addTarget('drone', 0, 0, { cx: -850, cz: -950, r: 200, h: 95, spd: 18 });
@@ -1739,6 +1887,7 @@ function fireWeapons(dt) {
     o.on = true; o.kind = a.kind; o.m.visible = true; o.m.position.copy(_hp); aimDir(_d, a.down);
     o.m.geometry = a.kind === 'bomb' ? ordGeo.bomb : ordGeo.rocket; o.m.material = ordMat[a.kind];
     if (a.kind === 'bomb') { o.v.copy(S.vel); o.v.y -= 1; o.life = 30; noise(0.2, 400, 0.05); }
+    else if (a.kind === 'shell') { o.v.copy(_d).multiplyScalar(160); o.life = 4; o.tgt = null; noise(0.4, 220, 0.16); burst(_hp, 14, 4, [0.85, 0.8, 0.7]); S.gspd -= 0.6; }
     else { o.v.copy(S.vel).addScaledVector(_d, a.kind === 'missile' ? 20 : 60); o.life = a.kind === 'missile' ? 7 : 5; o.tgt = a.kind === 'missile' ? lockT : null; noise(0.35, 1400, 0.08); }
   }
 }
@@ -1790,6 +1939,7 @@ function updateWeapons(dt, time) {
     if (!o.on) return;
     _prev.copy(o.m.position); o.life -= dt;
     if (o.kind === 'bomb') { o.v.y -= 9.8 * dt; o.v.multiplyScalar(1 - 0.02 * dt); }
+    else if (o.kind === 'shell') { o.v.y -= 9.8 * dt * 0.3; }
     else if (o.kind === 'rocket') { o.v.y -= 9.8 * dt * 0.15; emit(o.m.position.x, o.m.position.y, o.m.position.z, (rnd() - .5), (rnd() - .5), (rnd() - .5), 0.8, 0.8, 0.8, 0.8, -0.1); }
     else {
       var sp = Math.min(75, o.v.length() + 40 * dt);
@@ -1802,7 +1952,7 @@ function updateWeapons(dt, time) {
     for (var j = 0; j < targets.length; j++) { var t = targets[j]; if (!t.dead && segHit(_prev, o.m.position, t.c, t.r + 0.5)) { hit = t; break; } }
     var gy = G(o.m.position.x, o.m.position.z);
     if (hit || o.m.position.y < gy || o.life <= 0) {
-      var R = o.kind === 'bomb' ? 14 : o.kind === 'missile' ? 7 : 6, D = o.kind === 'bomb' ? 40 : o.kind === 'missile' ? 18 : 10;
+      var R = o.kind === 'bomb' ? 14 : o.kind === 'missile' || o.kind === 'shell' ? 7 : 6, D = o.kind === 'bomb' ? 40 : o.kind === 'missile' ? 18 : o.kind === 'shell' ? 16 : 10;
       if (o.m.position.y < gy) o.m.position.y = gy + 0.3;
       if (hit) damage(hit, D);
       explode(o.m.position, R, D * 0.6);
@@ -1938,10 +2088,13 @@ var SIL = {
   b2: '<svg viewBox="0 0 120 50"><path d="M60 10l52 26-6 3-16-7-8 6-10-5-12 5-12-5-10 5-8-6-16 7-6-3z" fill="#3d4249"/></svg>',
   heli: '<svg viewBox="0 0 120 50"><rect x="14" y="10" width="92" height="3" fill="#222"/><rect x="58" y="12" width="3" height="8" fill="#333"/><path d="M40 20h40c8 0 12 6 10 10H44c-6 0-8-6-4-10z" fill="#4a5236"/><rect x="8" y="22" width="36" height="5" fill="#4a5236"/><path d="M6 14l4 0 4 10H8z" fill="#4a5236"/><rect x="44" y="36" width="44" height="3" fill="#222"/></svg>',
   osprey: '<svg viewBox="0 0 120 50"><rect x="22" y="24" width="80" height="12" rx="6" fill="#7a8088"/><rect x="50" y="18" width="30" height="4" fill="#6a7078"/><rect x="58" y="6" width="8" height="16" rx="3" fill="#6a7078"/><rect x="40" y="5" width="44" height="2" fill="#222"/><path d="M22 26l-8-12h7l9 12z" fill="#7a8088"/></svg>',
+  tank: '<svg viewBox="0 0 120 50"><rect x="14" y="30" width="92" height="12" rx="6" fill="#2b2b2b"/><rect x="18" y="22" width="84" height="10" fill="#b8a77a"/><rect x="38" y="13" width="36" height="10" rx="2" fill="#a8986c"/><rect x="72" y="16" width="40" height="3" fill="#6e6448"/></svg>',
+  car: '<svg viewBox="0 0 120 50"><path d="M10 34c0-6 4-9 12-10l14-8h36l16 8c12 1 22 4 22 10v4H10z" fill="#c8102e"/><path d="M40 18h30l12 7H32z" fill="#15222f"/><circle cx="30" cy="38" r="7" fill="#151515"/><circle cx="90" cy="38" r="7" fill="#151515"/></svg>',
+  moto: '<svg viewBox="0 0 120 50"><circle cx="28" cy="36" r="10" fill="none" stroke="#151515" stroke-width="5"/><circle cx="92" cy="36" r="10" fill="none" stroke="#151515" stroke-width="5"/><path d="M30 34l20-12h26l14 12z" fill="#1f5fd1"/><path d="M56 20c4-8 14-10 18-4l-6 6z" fill="#22252b"/><circle cx="70" cy="10" r="5" fill="#f2f2f2"/></svg>',
   af1: '<svg viewBox="0 0 120 50"><path d="M10 28c0-6 6-8 12-8h70c8 0 14 4 16 8z" fill="#fff"/><path d="M10 28h98c-2 4-8 6-16 6H22c-6 0-12-2-12-6z" fill="#8fb3d9"/><rect x="14" y="27" width="92" height="1.6" fill="#1f3f7a"/><path d="M14 22l-6-14h8l10 14z" fill="#1f3f7a"/><path d="M90 20c2-4 8-4 12 0z" fill="#fff"/></svg>'
 };
-var STARTS = [['runway', '🛫 Runway 05', 'Doylestown Airport'], ['helipad', '🚁 Helipad', 'Airport apron'], ['water', '🌊 Lake Galena', 'Seaplane only'], ['hand', '✋ Hand toss', 'Launch at the airport'], ['air', '☁️ In the air', 'Start already flying']];
-function startOK(s) { var t = T[game.plane]; if (s === 'water') return !!t.water; if (s === 'helipad') return !!(t.heli || t.tilt); if (t.heli && s !== 'helipad' && s !== 'air' && s !== 'pcs') return false; return true; }
+var STARTS = [['runway', '🛫 Runway 05', 'Doylestown Airport'], ['town', '🏙️ Downtown', 'Main St, Doylestown'], ['range', '🎯 Target Range', 'Tanks, trucks & bunkers'], ['shrine', '⛪ The Shrine', 'Our Lady of Czestochowa'], ['newhope', '🌉 New Hope', 'By the Delaware River'], ['helipad', '🚁 Helipad', 'Airport apron'], ['water', '🌊 Lake Galena', 'Seaplane only'], ['hand', '✋ Hand toss', 'Launch at the airport'], ['air', '☁️ In the air', 'Start already flying']];
+function startOK(s) { var t = T[game.plane]; var gs = ['runway', 'town', 'range', 'shrine', 'newhope']; if (t.ground) return gs.indexOf(s) >= 0; if (s !== 'runway' && gs.indexOf(s) >= 0) return false; if (s === 'water') return !!t.water; if (s === 'helipad') return !!(t.heli || t.tilt); if (t.heli && s !== 'helipad' && s !== 'air' && s !== 'pcs') return false; return true; }
 function buildMenu() {
   var pr = $('planeRow'); pr.innerHTML = '';
   PLANES.forEach(function (k) {
@@ -1952,6 +2105,7 @@ function buildMenu() {
   });
   var sr = $('startRow'); sr.innerHTML = '';
   STARTS.forEach(function (o) {
+    if (!startOK(o[0]) && (T[game.plane].ground || ['town', 'range', 'shrine', 'newhope'].indexOf(o[0]) >= 0)) return;
     if (TOUR && (o[0] === 'water' || o[0] === 'hand' || o[0] === 'pcs' || (o[0] === 'helipad' && !T[game.plane].heli))) return;
     var ok = startOK(o[0]), b = document.createElement('button');
     b.className = 'opt' + (game.start === o[0] ? ' sel' : ''); b.disabled = !ok;
@@ -1962,13 +2116,15 @@ function buildMenu() {
   if (t.heli) help = '<li><b>Left stick ↕</b> collective (lift) — about halfway hovers · <b>↔</b> spin left/right</li><li><b>Right stick</b> tilts the helicopter to fly in that direction</li>';
   else if (t.ch === 3) help = '<li><b>Left stick ↕</b> throttle (stays put like a real transmitter)</li><li><b>Right stick ↔</b> turn (differential motors) · <b>↕</b> elevator</li>';
   else help = '<li><b>Left stick ↕</b> throttle (stays put) · <b>↔</b> rudder / steer on the ground</li><li><b>Right stick ↔</b> ailerons (roll) · <b>↕</b> elevator</li>';
+  if (t.ground) help = '<li><b>Drive:</b> arrow keys — <b>↑</b> gas · <b>↓</b> brake' + (game.real ? '' : ' (hold to back up)') + ' · <b>← →</b> steer · <b>H</b> horn</li><li>Touch: slide the <b>steer pad</b>, hold <b>GAS</b> and <b>BRAKE</b>, tap <b>Horn</b>.</li>' + (game.real ? '<li><b>Realistic:</b> ' + (game.plane === 'tank' ? 'the tank is heavy — it takes time to get moving and stop, turns slowly on the move and pivots when stopped; hold ↓ when stopped to back up.' : 'start in <b>N</b> — press <b>Shift</b> (or ▲) for 1st and shift up as it revs, <b>Ctrl</b> (or ▼) to shift down; go below 1st for <b>R</b>everse. ' + (game.plane === 'moto' ? 'The bike leans into turns, so start the turn early.' : 'Corner too fast and the tyres slide wide.')) + '</li>' : '<li><b>Easy:</b> automatic — just gas, brake and steer. Turn on <b>Realistic driving</b> below for gears, grip and momentum.</li>') + '<li>Cars and motorcycles are fastest on the roads. Drive to downtown, the Shrine, the airport, Camp Curiosity or New Hope.</li>';
   if (t.tilt) help += '<li>Tap <b>VTOL ⇄ Plane</b> to tilt the rotors. Hover mode works like the helicopter.</li>';
-  if (!TOUR && game.weapons && W && (W.gun || W.alt)) help += '<li>Hold <b>FIRE</b> (keyboard <b>F</b>) for guns' + (W.alt ? ', and <b>' + ALT_LABEL[W.alt.kind] + '</b> (keyboard <b>R</b>) for rockets, bombs or missiles' : '') + '. Targets are at the Target Range, on Lake Galena and in the sky.</li>';
+  if (!TOUR && game.weapons && W && (W.gun || W.alt)) help += '<li>Hold <b>FIRE</b> (keyboard <b>F</b>) for guns' + (W.alt ? ', and <b>' + ALT_LABEL[W.alt.kind] + '</b> (keyboard <b>R</b>) for the cannon, rockets, bombs or missiles' : '') + '. Targets are at the Target Range, on Lake Galena and in the sky.</li>';
   if (TOUR) help = '<li><b>Autopilot</b> flies the whole tour for you — just sit back and watch. Grab the sticks any time to take over.</li>' + help + '<li>Fly through each yellow ring to hear about that part of campus.</li>';
   $('helpList').innerHTML = help;
   $('tGyro').classList.toggle('on', game.gyro); $('tRc').classList.toggle('on', game.rc);
   if ($('tAuto')) $('tAuto').classList.toggle('on', game.auto);
   if ($('tWeap')) $('tWeap').classList.toggle('on', game.weapons);
+  $('tReal').classList.toggle('on', game.real);
 }
 $('tGyro').onclick = function () { game.gyro = !game.gyro; buildMenu(); syncBtns(); };
 $('tRc').onclick = function () { game.rc = !game.rc; buildMenu(); };
@@ -1981,7 +2137,7 @@ $('go').onclick = function () {
   if (!TOUR && ringRun.on) startRings();
   if (TOUR && T[game.plane].heli) showCard('Curiosity Campus Tour', 'Slide the left stick up to lift off — about halfway hovers. Tilt the right stick to fly, and follow the yellow rings!', 7);
   else if (TOUR) showCard('Curiosity Campus Tour', game.auto ? 'Autopilot engaged — enjoy the flight! Touch a stick to take over.' : 'Throttle up, roll down runway 05 and pull back gently to lift off. Follow the yellow rings.', 6);
-  else toast(T[game.plane].heli ? 'Raise the left stick to lift off!' : 'Throttle up, then pull back gently!', 2.5);
+  else toast(T[game.plane].ground ? (game.plane === 'tank' ? 'Arrow keys to drive · F = machine gun · R = cannon · H = horn' : hasGears() ? 'In neutral — Shift (▲) into 1st, then ↑ for gas' : 'Arrow keys to drive · H = horn') : T[game.plane].heli ? 'Raise the left stick to lift off!' : 'Throttle up, then pull back gently!', 2.5);
 };
 $('bMenu').onclick = function () { game.paused = true; buildMenu(); $('menu').classList.remove('hidden'); document.body.classList.remove('playing'); $('menu').scrollTop = 0; };
 $('bReset').onclick = function () { spawn(); if (!TOUR && ringRun.on) startRings(); };
@@ -1999,7 +2155,16 @@ function holdBtn(el, key) {
   var up = function () { input[key] = false; el.classList.remove('down'); };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
 }
-holdBtn($('bFire'), 'fire'); holdBtn($('bAlt'), 'alt');
+holdBtn($('bFire'), 'fire'); holdBtn($('bAlt'), 'alt'); holdBtn($('bGas'), 'gas'); holdBtn($('bBrake'), 'brake');
+$('bHorn').addEventListener('pointerdown', function (e) { e.preventDefault(); initAudio(); horn(); });
+$('bGUp').addEventListener('pointerdown', function (e) { e.preventDefault(); setGearG((S.gear || 0) + 1); });
+$('bGDn').addEventListener('pointerdown', function (e) { e.preventDefault(); setGearG((S.gear || 0) - 1); });
+(function () { var el = $('wheel'), id = null, sx = 0;
+  el.addEventListener('pointerdown', function (e) { e.preventDefault(); initAudio(); id = e.pointerId; sx = e.clientX; try { el.setPointerCapture(id); } catch (er) {} });
+  el.addEventListener('pointermove', function (e) { if (e.pointerId !== id) return; input.dsteer = clamp((e.clientX - sx) / (el.clientWidth * 0.45), -1, 1); });
+  var end = function (e) { if (e.pointerId !== id) return; id = null; input.dsteer = 0; }; el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); })();
+if (TOUR) $('tReal').style.display = 'none';
+$('tReal').onclick = function () { game.real = !game.real; buildMenu(); syncBtns(); };
 function syncBtns() {
   $('bCam').textContent = '🎥 ' + CAMS[game.cam];
   $('bGyro').textContent = 'Gyro ' + (game.gyro ? 'ON' : 'OFF'); $('bGyro').classList.toggle('on', game.gyro);
@@ -2038,11 +2203,16 @@ function drawSticks() {
   stickR.querySelector('.knob').style.transform = 'translate(' + input.rx * R + 'px,' + input.ry * R + 'px)';
   $('thrBar').firstChild.style.height = (input.thr * 100) + '%';
   var hov = t.heli || (t.tilt && S.vtol);
+  if (t.ground) { $('lblL').textContent = 'CRUISE · STEER'; $('lblR').textContent = 'STEER · GAS / BRAKE'; return; }
   $('lblL').textContent = hov ? 'LIFT · SPIN' : four ? 'THROTTLE · RUDDER' : 'THROTTLE';
   $('lblR').textContent = hov ? 'TILT / MOVE' : four ? 'AILERON · ELEVATOR' : 'TURN · ELEVATOR';
 }
 addEventListener('keydown', function (e) {
   var k = e.key.toLowerCase(); input.keys[k] = true;
+  if (T[S.type] && T[S.type].ground && game.playing) {
+    if (k === 'h' && !e.repeat) horn();
+    if (hasGears() && !e.repeat) { if (k === 'shift') setGearG((S.gear || 0) + 1); if (k === 'control') setGearG((S.gear || 0) - 1); }
+  }
   if (k === ' ' || k === 'f') input.fire = true; if (k === 'b' || k === 'r') input.alt = true;
   if (['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].indexOf(k) >= 0) takeover();
   if (e.key.indexOf('Arrow') === 0 || e.key === ' ') e.preventDefault();
@@ -2050,6 +2220,80 @@ addEventListener('keydown', function (e) {
 addEventListener('keyup', function (e) { var k = e.key.toLowerCase(); input.keys[k] = false; if (k === ' ' || k === 'f') input.fire = false; if (k === 'b' || k === 'r') input.alt = false; });
 document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
 
+
+// ---------------- Ground driving ----------------
+var gEul = new THREE.Euler(0, 0, 0, 'YXZ'), gWarnT = 0;
+function onBridgeG(x, z) { for (var i = 0; i < BRIDGES.length; i++) { var b = BRIDGES[i]; if (x > b.x0 && x < b.x1 && z > b.z0 - 1 && z < b.z1 + 1) return true; } return false; }
+function groundBlocked(x, z) {
+  if (H(x, z) < -0.25 && !onBridgeG(x, z)) return 'water';
+  var gy = G(x, z);
+  for (var i = 0; i < boxes.length; i++) { var b = boxes[i]; if (x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1 && b.top > gy + 1.2) return 'wall'; }
+  for (var j = 0; j < trees.length; j++) { var t = trees[j]; if (Math.abs(x - t.x) < 3 && Math.abs(z - t.z) < 3 && Math.hypot(x - t.x, z - t.z) < t.r * 0.25 + 0.4) return 'tree'; }
+  return null;
+}
+var GEARS = { car: [0, 10, 17, 24, 31, 38], moto: [0, 12, 19, 26, 33, 40] }, REV_TOP = 6;
+function horn() { if (!ac || !game.sound) return; try { [392, 494].forEach(function (f) { var o = ac.createOscillator(), gg = ac.createGain(), t = ac.currentTime; o.type = 'square'; o.frequency.value = S.type === 'tank' ? f * 0.6 : S.type === 'moto' ? f * 1.3 : f; gg.gain.setValueAtTime(0.05, t); gg.gain.setValueAtTime(0.05, t + 0.3); gg.gain.exponentialRampToValueAtTime(0.001, t + 0.4); o.connect(gg); gg.connect(ac.destination); o.start(t); o.stop(t + 0.42); }); } catch (e) {} }
+function hasGears() { return game.real && (S.type === 'car' || S.type === 'moto'); }
+function setGearG(gr) { var top = GEARS[S.type] ? GEARS[S.type].length - 1 : 5; S.gear = clamp(gr, -1, top); $('gearBadge').textContent = S.gear === -1 ? 'R' : S.gear === 0 ? 'N' : S.gear; beep(S.gear ? 300 : 200, 0.05); }
+function groundStep(dt) {
+  var Tt = T[S.type], k = input.keys, real = game.real;
+  var up = (k.arrowup ? 1 : 0) || (input.gas ? 1 : 0), dn = (k.arrowdown ? 1 : 0) || (input.brake ? 1 : 0);
+  var steer = (k.arrowright ? 1 : 0) - (k.arrowleft ? 1 : 0); if (!steer) steer = input.dsteer || 0;
+  S.steer += (steer - S.steer) * Math.min(1, dt * (real ? 4 : 8));
+  var rl = PHYS.rwyLocal(S.pos.x, S.pos.z), onRoad = roadDist(S.pos.x, S.pos.z) < 1 || onBridgeG(S.pos.x, S.pos.z) || (Math.abs(rl.v) < RWY.wid && Math.abs(rl.u) < RWY.len / 2);
+  var vmax = Tt.vmax * (onRoad ? 1 : Tt.offroad), sp = S.gspd, drive = 0;
+  if (!real) {
+    var cmd = up - dn;
+    if (cmd > 0) { if (sp < 0) sp = Math.min(0, sp + 14 * dt); else if (sp < vmax) sp = Math.min(vmax, sp + Tt.acc * (1 - 0.5 * sp / Tt.vmax) * dt); }
+    else if (cmd < 0) sp = sp > 0.3 ? sp - 14 * dt : Math.max(-vmax * 0.3, sp - Tt.acc * 0.6 * dt);
+    else sp -= Math.sign(sp) * Math.min(Math.abs(sp), (2 + Math.abs(sp) * 0.08) * dt);
+    drive = Math.abs(cmd);
+  } else {
+    // realistic: engine pulls through the gears, brakes only brake, drag + rolling resistance
+    var acc = 0, gtop = vmax;
+    if (hasGears()) {
+      var G0 = GEARS[S.type], gr = S.gear || 0;
+      if (gr > 0) { gtop = Math.min(G0[gr], vmax * 1.05); var lo = G0[gr - 1] * 0.55, f = sp < lo ? 0.35 + 0.65 * sp / Math.max(lo, 0.1) : 1; acc = up * Tt.acc * (1.5 - gr * 0.17) * Math.max(0.3, f) * (sp < gtop ? 1 : 0); }
+      else if (gr === -1) { gtop = REV_TOP; acc = -up * Tt.acc * 0.8 * (sp > -REV_TOP ? 1 : 0); }
+      S.rpm = gr > 0 ? clamp(sp / G0[gr], 0.12, 1.05) : gr === -1 ? clamp(-sp / REV_TOP, 0.12, 1) : 0.12 + up * 0.8;
+      if (gr > 0 && sp > G0[gr] * 1.02) sp -= 4 * dt;           // engine braking / over-rev
+    } else { acc = up * Tt.acc * 0.7 * (sp < vmax ? 1 - sp / (vmax * 1.15) : 0); if (S.type === 'tank' && dn && sp < 0.5) { acc = -Tt.acc * 0.5 * (sp > -4 ? 1 : 0); } }
+    sp += acc * dt;
+    if (dn && !(S.type === 'tank' && sp < 0.5)) sp -= Math.sign(sp) * Math.min(Math.abs(sp), (S.type === 'tank' ? 5 : 9) * dt);
+    sp -= Math.sign(sp) * Math.min(Math.abs(sp), (0.25 + sp * sp * 0.0012 + (onRoad ? 0 : 0.8)) * dt);
+    drive = up;
+  }
+  // turning
+  var yr;
+  if (Tt.pivot) yr = S.steer * (real ? (Math.abs(sp) < 1 ? 0.55 : 0.35) : Tt.pivot) * (sp < -0.5 ? -1 : 1);
+  else if (Tt.lean && real) {
+    S.leanA = S.leanA || 0; var leanT = clamp(S.steer * 0.85, -0.85, 0.85) * clamp(Math.abs(sp) / 8, 0, 1);
+    S.leanA += clamp(leanT - S.leanA, -2.2 * dt, 2.2 * dt);
+    yr = Math.abs(sp) < 3 ? sp / (Tt.wb * Tt.scale) * Math.tan(S.steer * 0.5) : 9.8 * Math.tan(S.leanA) / Math.max(3, Math.abs(sp)) * Math.sign(sp);
+  } else yr = sp / (Tt.wb * Tt.scale) * Math.tan(S.steer * 0.5 / (1 + Math.abs(sp) / (real ? 40 : 22)));
+  if (real) {   // tyres only grip so much: past ~0.9 g the car slides wide and scrubs speed
+    var grip = S.type === 'tank' ? 5 : 8.8, lat = Math.abs(yr * sp);
+    if (lat > grip) { yr *= grip / lat; sp -= Math.sign(sp) * Math.min(Math.abs(sp), (lat - grip) * 0.35 * dt); if (Math.abs(sp) > 8 && rnd() < 0.5) { tmpV.set(-Math.sin(S.gyaw) * 2, 0.2, -Math.cos(S.gyaw) * 2).add(S.pos); emit(tmpV.x, tmpV.y, tmpV.z, (rnd() - .5), 0.6, (rnd() - .5), 1.2, 0.85, 0.85, 0.85, -0.05); } }
+  }
+  S.gyaw -= yr * dt;
+  var nx = S.pos.x + Math.sin(S.gyaw) * sp * dt, nz = S.pos.z + Math.cos(S.gyaw) * sp * dt;
+  var hit = groundBlocked(nx + Math.sin(S.gyaw) * Math.sign(sp) * Tt.scale * 0.9, nz + Math.cos(S.gyaw) * Math.sign(sp) * Tt.scale * 0.9);
+  if (hit && Math.abs(sp) > 0.05) {
+    if (Math.abs(sp) > 8) { burst(S.pos, 20, 3, [0.6, 0.5, 0.4]); beep(160, 0.15); }
+    sp = -sp * 0.2; gWarnT -= dt; if (gWarnT <= 0) { toast(hit === 'water' ? '🌊 Can\'t drive into the water!' : hit === 'tree' ? '🌳 Bonk! Tree.' : '🧱 Bonk!', 1.2); gWarnT = 1.5; }
+  } else { S.pos.x = nx; S.pos.z = nz; }
+  S.gspd = sp;
+  var L = Tt.scale * 0.9, fx = Math.sin(S.gyaw), fz = Math.cos(S.gyaw);
+  var hF = G(S.pos.x + fx * L, S.pos.z + fz * L), hB = G(S.pos.x - fx * L, S.pos.z - fz * L), hR = G(S.pos.x - fz * 0.6, S.pos.z + fx * 0.6), hL = G(S.pos.x + fz * 0.6, S.pos.z - fx * 0.6);
+  S.pos.y = (hF + hB) / 2 + 0.02; if (onBridgeG(S.pos.x, S.pos.z)) { S.pos.y = 1.42; hF = hB = hR = hL = 1.4; }
+  var roll = Math.atan2(hR - hL, 1.2) * 0.8;
+  if (Tt.lean) roll += real ? S.leanA || 0 : clamp(-yr * Math.abs(sp) * 0.06, -0.75, 0.75);
+  if (Tt.lean && real) roll = -roll + 2 * Math.atan2(hR - hL, 1.2) * 0.8;   // lean into the turn
+  gEul.set(-Math.atan2(hF - hB, 2 * L), S.gyaw, roll); S.q.setFromEuler(gEul);
+  S.vel.set(fx * sp, 0, fz * sp); S.onSurface = true; S.surf = 'ground'; S.battery = 1;
+  S.motor = hasGears() ? 0.15 + 0.8 * (S.rpm || 0) * (0.6 + 0.4 * drive) : 0.12 + 0.88 * Math.min(1, Math.abs(sp) / Tt.vmax * 0.8 + drive * 0.3);
+  S.throttle = drive;
+}
 // ---------------- Update ----------------
 function expo(x) { return x * Math.abs(x) * 0.55 + x * 0.45; }
 var wobble = 0;
@@ -2057,13 +2301,17 @@ function update(dt) {
   game.time += dt;
   waterTex.offset.x += dt * 0.004; waterTex.offset.y += dt * 0.002;
   var Tt = T[S.type], sc = Tt.scale;
-  if (game.playing && !game.paused) {
+  if (game.playing && !game.paused && Tt.ground) {
+    if (S.state === 'ok') groundStep(dt);
+    if (!TOUR && game.weapons) { fireWeapons(dt); updateWeapons(dt, game.time); }
+    $('sSpd').textContent = Math.round(Math.abs(S.gspd) * 2.237) + ' mph'; $('sAlt').textContent = '0 ft'; $('sBat').textContent = '⛽'; $('bSwap').style.display = 'none';
+  } else if (game.playing && !game.paused) {
     var steer, elev, rud, thr;
     if (game.auto && S.state === 'ok') {
       var ap = autopilot(); thr = ap.thr; steer = ap.steer; elev = ap.elev; rud = ap.rud; input.thr = thr;
     } else {
       var k = input.keys;
-      if (k.w || k.shift) input.thr = clamp(input.thr + dt * 0.6, 0, 1);
+      if (k.w || (k.shift && !T[S.type].ground)) input.thr = clamp(input.thr + dt * 0.6, 0, 1);
       if (k.s || k.control) input.thr = clamp(input.thr - dt * 0.6, 0, 1);
       var kx = (k.arrowright ? 1 : 0) - (k.arrowleft ? 1 : 0), ky = (k.arrowup ? 1 : 0) - (k.arrowdown ? 1 : 0), kr = (k.d ? 1 : 0) - (k.a ? 1 : 0);
       if (kx || ky || kr || k.w || k.s) drawSticks();
@@ -2126,7 +2374,14 @@ function update(dt) {
 }
 
 var spin = 0, nacAng = 0;
+var wheelAng = 0;
 function animate(A, dt) {
+  if (T[S.type].ground) {
+    wheelAng += (S.gspd || 0) * dt / (0.3 * T[S.type].scale);
+    A.wheels.forEach(function (w) { w.rotation.order = 'YXZ'; w.rotation.x = wheelAng; });
+    (A.fw || []).forEach(function (w) { w.rotation.order = 'YXZ'; w.rotation.y = -S.steer * 0.45; });
+    return;
+  }
   spin += (0.2 + S.motor) * dt * 90 * (S.motor > 0.02 ? 1 : 0);
   var heliish = S.type === 'heli';
   A.props.forEach(function (p, i) {
