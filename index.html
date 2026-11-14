@@ -203,7 +203,7 @@
     <h3>Settings</h3>
     <div class="toggles">
       <button class="tog on" id="tGyro"><i></i><span>Gyro stabilizer<small>Levels the wings for you — great for learning</small></span></button>
-      <button class="tog" id="tAuto"><i></i><span>Autopilot tour<small>The plane flies the whole tour for you</small></span></button><button class="tog" id="tReal"><i></i><span>Realistic driving<small>Tanks, cars &amp; motorcycles: manual gears (Shift ▲ / Ctrl ▼), real grip &amp; momentum</small></span></button><button class="tog on" id="tRc"><i></i><span>Real RC elevator<small>Pull stick down to climb, push up to dive</small></span></button>
+      <button class="tog" id="tAuto"><i></i><span>Autopilot tour<small>The plane flies the whole tour for you</small></span></button><button class="tog on" id="tEasy"><i></i><span>Easy flying<small>The computer handles throttle &amp; balance — just point where to go</small></span></button><button class="tog" id="tReal"><i></i><span>Realistic driving<small>Tanks, cars &amp; motorcycles: manual gears (Shift ▲ / Ctrl ▼), real grip &amp; momentum</small></span></button><button class="tog on" id="tRc"><i></i><span>Real RC elevator<small>Pull stick down to climb, push up to dive</small></span></button>
     </div>
     <h3>How to fly</h3>
     <ul class="help" id="helpList"></ul>
@@ -1683,7 +1683,7 @@ function burst(p, n, power, col) { col = col || [0.95, 0.97, 1]; for (var i = 0;
 // ---------------- Game state ----------------
 var S = PHYS.newState();
 var game = { plane: TOUR ? 'trainer' : 'warbird', start: 'runway', gyro: true, rc: true, cam: 0, playing: false, paused: true,
-  resetT: 0, airT: 0, real: false, sound: true, lowBeepT: 0, emptyShown: false, score: 0, kills: 0, auto: false, time: 0, weapons: true };
+  resetT: 0, airT: 0, real: false, easy: true, sound: true, lowBeepT: 0, emptyShown: false, score: 0, kills: 0, auto: false, time: 0, weapons: true };
 var CAMS = ['Chase', 'Pilot', 'FPV'];
 var input = { thr: 0, lx: 0, rx: 0, ry: 0, keys: {}, fire: false, alt: false, gas: false, brake: false, dsteer: 0 };
 var tmpV = new V3(), tmpF = new V3(), tmpU = new V3(), tmpL = new V3(), camHead = new V3(0, 0, 1), lookAt = new V3();
@@ -1721,7 +1721,7 @@ function spawn() {
   Object.keys(models).forEach(function (k) { models[k].root.visible = k === game.plane; });
   document.body.classList.toggle('ground', !!T0.ground); $('drvUI').style.display = T0.ground ? '' : 'none'; $('gbox').style.display = T0.ground && game.real && (game.plane === 'car' || game.plane === 'moto') ? '' : 'none';
   $('planeName').textContent = T0.name.toUpperCase();
-  game.emptyShown = false; game.airT = 0;
+  game.emptyShown = false; game.airT = 0; game.hAlt = undefined; game.hI = undefined;
   if (TOUR) tourReset();
   syncBtns(); drawSticks();
 }
@@ -2125,7 +2125,8 @@ function buildMenu() {
   if (t.heli) help = '<li><b>Left stick ↕</b> collective (lift) — about halfway hovers · <b>↔</b> spin left/right</li><li><b>Right stick</b> tilts the helicopter to fly in that direction</li>';
   else if (t.ch === 3) help = '<li><b>Left stick ↕</b> throttle (stays put like a real transmitter)</li><li><b>Right stick ↔</b> turn (differential motors) · <b>↕</b> elevator</li>';
   else help = '<li><b>Left stick ↕</b> throttle (stays put) · <b>↔</b> rudder / steer on the ground</li><li><b>Right stick ↔</b> ailerons (roll) · <b>↕</b> elevator</li>';
-  if (!t.ground) help += '<li>Keyboard: <b>arrow keys</b> only — <b>↑ / ↓</b> throttle' + (t.heli ? ' (lift)' : ' (more throttle climbs, less descends)') + ' · <b>← / →</b> steer' + (TOUR ? '' : ' · <b>F</b> guns · <b>R</b> rockets') + '</li>';
+  if (!t.ground && game.easy) help = (t.heli || t.tilt ? '<li><b>Easy flying:</b> hold <b>↑</b> (or push the right stick up) to take off and fly forward · <b>← →</b> turn · let go to hover · hold <b>↓</b> to slow down, then keep holding to land.</li>' : '<li><b>Easy flying:</b> hold <b>↑</b> on the runway to take off, then <b>↑</b> climb · <b>↓</b> descend · <b>← →</b> turn (or use the right stick). The computer handles the throttle and keeps the wings level. To land, line up with the runway and hold <b>↓</b> gently.</li>');
+  if (!t.ground && !game.easy) help += '<li>Keyboard: <b>arrow keys</b> only — <b>↑ / ↓</b> throttle' + (t.heli ? ' (lift)' : ' (more throttle climbs, less descends)') + ' · <b>← / →</b> steer' + (TOUR ? '' : ' · <b>F</b> guns · <b>R</b> rockets') + '</li>';
   if (t.ground) help = '<li><b>Drive:</b> arrow keys — <b>↑</b> gas · <b>↓</b> brake' + (game.real ? '' : ' (hold to back up)') + ' · <b>← →</b> steer · <b>H</b> horn</li><li>Touch: slide the <b>steer pad</b>, hold <b>GAS</b> and <b>BRAKE</b>, tap <b>Horn</b>.</li>' + (game.real ? '<li><b>Realistic:</b> ' + (game.plane === 'tank' ? 'the tank is heavy — it takes time to get moving and stop, turns slowly on the move and pivots when stopped; hold ↓ when stopped to back up.' : 'start in <b>N</b> — press <b>Shift</b> (or ▲) for 1st and shift up as it revs, <b>Ctrl</b> (or ▼) to shift down; go below 1st for <b>R</b>everse. ' + (game.plane === 'moto' ? 'The bike leans into turns, so start the turn early.' : 'Corner too fast and the tyres slide wide.')) + '</li>' : '<li><b>Easy:</b> automatic — just gas, brake and steer. Turn on <b>Realistic driving</b> below for gears, grip and momentum.</li>') + '<li>Cars and motorcycles are fastest on the roads. Drive to downtown, the Shrine, the airport, Camp Curiosity or New Hope.</li>';
   if (t.tilt) help += '<li>Tap <b>VTOL ⇄ Plane</b> to tilt the rotors. Hover mode works like the helicopter.</li>';
   if (!TOUR && game.weapons && W && (W.gun || W.alt)) help += '<li>Hold <b>FIRE</b> (keyboard <b>F</b>) for guns' + (W.alt ? ', and <b>' + ALT_LABEL[W.alt.kind] + '</b> (keyboard <b>R</b>) for the cannon, rockets, bombs or missiles' : '') + '. Targets are at the Target Range, on Lake Galena and in the sky.</li>';
@@ -2134,7 +2135,7 @@ function buildMenu() {
   $('tGyro').classList.toggle('on', game.gyro); $('tRc').classList.toggle('on', game.rc);
   if ($('tAuto')) $('tAuto').classList.toggle('on', game.auto);
   if ($('tWeap')) $('tWeap').classList.toggle('on', game.weapons);
-  $('tReal').classList.toggle('on', game.real);
+  $('tReal').classList.toggle('on', game.real); $('tEasy').classList.toggle('on', game.easy);
 }
 $('tGyro').onclick = function () { game.gyro = !game.gyro; buildMenu(); syncBtns(); };
 $('tRc').onclick = function () { game.rc = !game.rc; buildMenu(); };
@@ -2175,6 +2176,7 @@ $('bGDn').addEventListener('pointerdown', function (e) { e.preventDefault(); set
   var end = function (e) { if (e.pointerId !== id) return; id = null; input.dsteer = 0; }; el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); })();
 if (TOUR) $('tReal').style.display = 'none';
 $('tReal').onclick = function () { game.real = !game.real; buildMenu(); syncBtns(); };
+$('tEasy').onclick = function () { game.easy = !game.easy; buildMenu(); syncBtns(); };
 function syncBtns() {
   $('bCam').textContent = '🎥 ' + CAMS[game.cam];
   $('bGyro').textContent = 'Gyro ' + (game.gyro ? 'ON' : 'OFF'); $('bGyro').classList.toggle('on', game.gyro);
@@ -2405,6 +2407,36 @@ function update(dt) {
           elev = clamp((pt - pitch) * 2.6 - (S.onSurface ? 0 : 0), -0.6, 0.6);
         }
       }
+    }
+    if (game.easy && !(game.auto && S.state === 'ok') && S.state === 'ok') {
+      // ---- Easy flying: the computer handles throttle, balance and safety; you just point where to go ----
+      var k2 = input.keys, ex = ((k2.arrowright ? 1 : 0) - (k2.arrowleft ? 1 : 0)) || clamp(input.rx * 1.3, -1, 1), ey = ((k2.arrowup ? 1 : 0) - (k2.arrowdown ? 1 : 0)) || clamp(-input.ry * 1.3, -1, 1);
+      tmpF.set(0, 0, 1).applyQuaternion(S.q); tmpL.set(-1, 0, 0).applyQuaternion(S.q);
+      var pch = Math.asin(clamp(tmpF.y, -1, 1)), bankR = Math.asin(clamp(-tmpL.y, -1, 1)), agl = S.pos.y - Tt.bottom - G(S.pos.x, S.pos.z), V = S.vel.length();
+      if (Tt.heli || (Tt.tilt && S.vtol)) {
+        if (game.hAlt === undefined || S.onSurface && ey <= 0) game.hAlt = S.onSurface ? 0 : agl;
+        if (ey > 0 && game.hAlt < 25) game.hAlt = Math.min(25, game.hAlt + dt * 8);            // take off and climb to cruising height
+        var fwdV = S.vel.x * tmpF.x + S.vel.z * tmpF.z;
+        if (ey < 0 && fwdV < 1.5) game.hAlt = Math.max(-2, game.hAlt - dt * 4);                // stopped + down = land
+        var vyT = clamp((game.hAlt - agl) * 0.6, agl < 6 ? -0.9 : -3, 3.5);
+        if (game.hI === undefined) game.hI = 0.5;
+        var ev = vyT - S.vel.y; game.hI = clamp(game.hI + ev * 0.06 * dt, 0.2, 0.9); input.thr = clamp(game.hI + ev * 0.09, 0, 1); thr = input.thr;
+        elev = ey > 0 && agl > 4 ? -0.5 : ey < 0 ? clamp(fwdV * 0.08, 0, 0.4) : clamp(fwdV * 0.05, -0.2, 0.2);
+        rud = ex * 0.8; steer = 0;
+      } else {
+        var vc = 13 * Math.sqrt(Tt.scale / 2) * (Tt.thrust > 10 ? 1.25 : 1);
+        if (S.onSurface) {
+          thr = ey > 0 ? 1 : ey < 0 ? 0 : input.thr; input.thr = thr;
+          elev = V > vc * 0.85 ? 0.35 : 0; steer = 0; rud = ex;                             // auto-rotate at takeoff speed
+        } else {
+          var pT = ey * 0.32; if (agl < 18) pT = Math.max(pT, -0.1); if (agl < 3 && S.vel.y < -0.5) pT = 0.12;   // gentle descents, flare before touchdown
+          var bT = ex * 0.6;
+          steer = clamp((bT - bankR) * 2.4, -1, 1); rud = steer * 0.3 + ex * 0.2;
+          elev = clamp((pT - pch) * 2.6 + Math.abs(bankR) * 0.5 - S.vel.y * 0.02, -0.7, 0.75);
+          thr = clamp(0.55 + pT * 1.3 + (vc - V) * 0.09 + Math.abs(bankR) * 0.2, ey < 0 && agl < 8 ? 0.05 : 0.25, 1); input.thr = thr;
+        }
+      }
+      drawSticks();
     }
     var sm = Math.min(1, dt * 12);
     S.throttle = thr;
