@@ -1699,7 +1699,7 @@ function buildShuttle() {
 }
 BUILDERS.shuttle = buildShuttle;
 // launch pad
-(function pad() {
+(function pad() { return;   // shuttle removed
   var gy = G(PAD.x, PAD.z);
   put(UBOX, PAD.x, gy + 1.5, PAD.z, 70, 3, 70, '#bdb8ad'); put(UBOX, PAD.x, gy + 3.05, PAD.z + 22, 14, 0.2, 18, '#4a4a4a');
   put(UBOX, PAD.x + 22, gy + 40, PAD.z, 9, 74, 9, '#9c3b2a'); put(UBOX, PAD.x + 22, gy + 78, PAD.z, 3, 6, 3, '#d8d8d8');
@@ -1823,7 +1823,7 @@ function shuttleStep(dt) {
 function shuttleUpdateDebris(dt) {
   SH.debris.forEach(function (d) { d.t += dt; d.v.y -= 9.8 * dt * 2; d.o.position.addScaledVector(d.v, dt); d.o.rotation.x += d.spin.x * dt; d.o.rotation.y += d.spin.y * dt; d.o.rotation.z += d.spin.z * dt; if (d.t > 30) d.o.visible = false; });
 }
-var PLANES = TOUR ? ['trainer', 'heli', 'shuttle'] : ['trainer', 'seaplane', 'warbird', 'jet', 'a10', 'b2', 'heli', 'osprey', 'af1', 'shuttle', 'tank', 'car', 'moto'];
+var PLANES = TOUR ? ['trainer', 'heli'] : ['trainer', 'seaplane', 'warbird', 'jet', 'a10', 'b2', 'heli', 'osprey', 'af1', 'tank', 'car', 'moto'];
 var models = {};
 if (TOUR) BUILDERS.heli = buildCivHeli;
 scene.traverse(function (o) { if (o.isMesh && !o.material.isShaderMaterial && o !== water) o.receiveShadow = true; });
