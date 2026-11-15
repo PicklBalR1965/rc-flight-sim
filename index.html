@@ -605,18 +605,35 @@ var CAMPUSMAP = (function () {
     // courtyard walls (open on the lot side)
     var wall = lamb(0xeae6dc), cy0 = ground(3, -2);
     [[3, -13.5, 30, 0.4], [-12, -2, 0.4, 23], [3, 9.5, 30, 0.4]].forEach(function (wv) { var wm = new THREE.Mesh(new THREE.BoxGeometry(wv[2], 1.6, wv[3]), wall); wm.position.set(o.x + wv[0], cy0 + 0.8, o.z + wv[1]); add(wm); cb.solid(o.x + wv[0] - wv[2] / 2, o.x + wv[0] + wv[2] / 2, o.z + wv[1] - wv[3] / 2, o.z + wv[1] + wv[3] / 2, cy0 + 1.6); });
-    // paddock rail fences
-    var rail = lamb(0x5a4632);
-    [[-175, -148, -132, -148], [-132, -148, -132, -96], [-175, -96, -132, -96], [-175, -148, -175, -96], [-175, -115, -132, -115]].forEach(function (f) {
-      var dx = f[2] - f[0], dz = f[3] - f[1], L = Math.hypot(dx, dz), mx = (f[0] + f[2]) / 2, mz = (f[1] + f[3]) / 2;
-      var fm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, L), rail); fm.rotation.y = Math.atan2(dx, dz); fm.position.set(o.x + mx, ground(mx, mz) + 1.1, o.z + mz); scene.add(fm);
-      var fm2 = fm.clone(); fm2.position.y -= 0.5; scene.add(fm2);
-    });
-    // field fence lines (SW field)
-    [[-150, -10, -150, 112], [-26, -10, -26, 112], [-150, 50, -26, 50]].forEach(function (f) {
-      var dx = f[2] - f[0], dz = f[3] - f[1], L = Math.hypot(dx, dz), mx = (f[0] + f[2]) / 2, mz = (f[1] + f[3]) / 2;
-      var fm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, L), rail); fm.rotation.y = Math.atan2(dx, dz); fm.position.set(o.x + mx, ground(mx, mz) + 1, o.z + mz); scene.add(fm);
-    });
+    // ---------- board fences (3-rail, white) — field lines, paddocks and the road frontage ----------
+    (function fences() {
+      var posts = [], rails = [], m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3(), p = new THREE.Vector3();
+      function line(x0, z0, x1, z1, gapRoads) {
+        var dx = x1 - x0, dz = z1 - z0, L = Math.hypot(dx, dz), n = Math.max(1, Math.round(L / 2.4)), prev = null;
+        for (var i = 0; i <= n; i++) {
+          var x = x0 + dx * i / n, z = z0 + dz * i / n, ok = !(gapRoads && roadAt(x, z)) && !inside(x, z, 0.5);
+          if (!ok) { prev = null; continue; }
+          var g = ground(x, z); posts.push([x, g, z]);
+          if (prev) { var mx = (x + prev[0]) / 2, mz = (z + prev[2]) / 2, seg = Math.hypot(x - prev[0], z - prev[2]), ang = Math.atan2(x - prev[0], z - prev[2]), dy = g - prev[1];
+            [0.42, 0.8, 1.18].forEach(function (h) { rails.push([mx, (g + prev[1]) / 2 + h, mz, seg, ang, Math.atan2(dy, seg)]); });
+            cb.solid(o.x + Math.min(x, prev[0]) - 0.1, o.x + Math.max(x, prev[0]) + 0.1, o.z + Math.min(z, prev[2]) - 0.1, o.z + Math.max(z, prev[2]) + 0.1, g + 1.3); }
+          prev = [x, g, z];
+        }
+      }
+      // Landisville Rd frontage and Burnt House Hill Rd side (gaps at every driveway)
+      line(-228, 113, 221, 113, true); line(221, 113, 221, -110, true);
+      // field divisions seen in the aerials
+      line(-150, -10, -150, 112, true); line(-26, -10, -26, 112, true); line(-150, 50, -26, 50, true);
+      line(-228, 50, -150, 50, true); line(150, 112, 150, 75, true); line(150, -30, 221, -30, true);
+      // paddocks by the farm
+      [[-175, -148, -132, -148], [-132, -148, -132, -96], [-175, -96, -132, -96], [-175, -148, -175, -96], [-175, -115, -132, -115]].forEach(function (f) { line(f[0], f[1], f[2], f[3], false); });
+      var white = new THREE.MeshLambertMaterial({ color: 0xf1eee6 });
+      var pm = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 1.4, 0.16), white, posts.length);
+      posts.forEach(function (pp, i) { m4.makeTranslation(o.x + pp[0], pp[1] + 0.7, o.z + pp[2]); pm.setMatrixAt(i, m4); });
+      var rm = new THREE.InstancedMesh(new THREE.BoxGeometry(0.05, 0.14, 1), white, rails.length), e = new THREE.Euler(0, 0, 0, 'YXZ');
+      rails.forEach(function (r, i) { e.set(-r[5], r[4], 0); q.setFromEuler(e); m4.compose(p.set(o.x + r[0], r[1], o.z + r[2]), q, sc.set(1, 1, r[3] + 0.1)); rm.setMatrixAt(i, m4); });
+      pm.castShadow = rm.castShadow = true; scene.add(pm, rm);
+    })();
     // ---------- activity areas & pool details ----------
     function bx(w, h, d, col, lx, lz, y, ry, solid) {
       var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof col === 'number' ? lamb(col) : col);
